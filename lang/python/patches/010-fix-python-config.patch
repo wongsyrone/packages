@@ -9,7 +9,7 @@ Signed-off-by: Gustavo Zacarias <gustavo@zacarias.com.ar>
 --- a/configure.ac
 +++ b/configure.ac
 @@ -885,6 +885,7 @@ fi
- 
+
  # Other platforms follow
  if test $enable_shared = "yes"; then
 +  PY_ENABLE_SHARED=1
@@ -17,7 +17,7 @@ Signed-off-by: Gustavo Zacarias <gustavo@zacarias.com.ar>
    case $ac_sys_system in
      BeOS*)
 @@ -945,6 +946,7 @@ if test $enable_shared = "yes"; then
- 
+
    esac
  else # shared is disabled
 +  PY_ENABLE_SHARED=0
@@ -36,37 +36,38 @@ Signed-off-by: Gustavo Zacarias <gustavo@zacarias.com.ar>
  AC_MSG_CHECKING(SO)
 @@ -4586,7 +4591,7 @@ AC_MSG_RESULT($ENSUREPIP)
  AC_SUBST(ENSUREPIP)
- 
+
  # generate output files
 -AC_CONFIG_FILES(Makefile.pre Modules/Setup.config Misc/python.pc)
 +AC_CONFIG_FILES(Makefile.pre Modules/Setup.config Misc/python.pc Misc/python-config.sh)
  AC_CONFIG_FILES([Modules/ld_so_aix], [chmod +x Modules/ld_so_aix])
  AC_OUTPUT
- 
+
 --- a/Makefile.pre.in
 +++ b/Makefile.pre.in
 @@ -164,7 +164,7 @@ SRCDIRS= 	@SRCDIRS@
  SUBDIRSTOO=	Include Lib Misc Demo
- 
+
  # Files and directories to be distributed
 -CONFIGFILES=	configure configure.ac acconfig.h pyconfig.h.in Makefile.pre.in
 +CONFIGFILES=	configure configure.ac acconfig.h pyconfig.h.in Makefile.pre.in Misc/python-config.sh
  DISTFILES=	README ChangeLog $(CONFIGFILES)
  DISTDIRS=	$(SUBDIRS) $(SUBDIRSTOO) Ext-dummy
  DIST=		$(DISTFILES) $(DISTDIRS)
-@@ -408,7 +408,7 @@ LIBRARY_OBJS=	\
- 
+@@ -429,7 +429,7 @@
+
  # Default target
- all:		build_all
+ all:		@DEF_MAKE_ALL_RULE@
 -build_all:	$(BUILDPYTHON) oldsharedmods sharedmods gdbhooks
 +build_all:	$(BUILDPYTHON) oldsharedmods sharedmods gdbhooks python-config
- 
- # Compile a binary with gcc profile guided optimization.
+
+ # Compile a binary with profile guided optimization.
  profile-opt:
+
 @@ -1092,10 +1092,12 @@ $(srcdir)/Lib/$(PLATDIR):
  	fi; \
  	cd $(srcdir)/Lib/$(PLATDIR); $(RUNSHARED) ./regen
- 
+
 -python-config: $(srcdir)/Misc/python-config.in
 +python-config: $(srcdir)/Misc/python-config.in Misc/python-config.sh
  	# Substitution happens here, as the completely-expanded BINDIR
@@ -75,7 +76,7 @@ Signed-off-by: Gustavo Zacarias <gustavo@zacarias.com.ar>
 +	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)$(EXE)," < $(srcdir)/Misc/python-config.in >python-config.py
 +	# Replace makefile compat. variable references with shell script compat. ones; $(VAR) -> ${VAR}
 +	sed -e 's,\$$(\([A-Za-z0-9_]*\)),\$$\{\1\},g' Misc/python-config.sh >python-config
- 
+
  # Install the include files
  INCLDIRSTOMAKE=$(INCLUDEDIR) $(CONFINCLUDEDIR) $(INCLUDEPY) $(CONFINCLUDEPY)
 @@ -1154,7 +1156,7 @@ libainstall:	all python-config
@@ -92,7 +93,7 @@ Signed-off-by: Gustavo Zacarias <gustavo@zacarias.com.ar>
  	-rm -rf build platform
  	-rm -rf $(PYTHONFRAMEWORKDIR)
 +	-rm -f python-config.py python-config
- 
+
  # Make things extra clean, before making a distribution:
  # remove all generated files, even Makefile[.pre]
 --- /dev/null
