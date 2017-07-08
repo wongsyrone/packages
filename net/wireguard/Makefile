@@ -11,12 +11,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=wireguard
 
-PKG_VERSION:=0.0.20170613
+PKG_VERSION:=0.0.20170629
 PKG_RELEASE:=1
 
 PKG_SOURCE:=WireGuard-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://git.zx2c4.com/WireGuard/snapshot/
-PKG_HASH:=88ac77569eeb79c517318d58a0954caa0a4d2a6a1694e74c2a3b1c14438ac941
+PKG_HASH:=51c44624f20eaff96780845214f85491c0c7330598633cd180bb2a6547e5d2b2
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
@@ -100,7 +100,7 @@ define KernelPackage/wireguard
   CATEGORY:=Kernel modules
   SUBMENU:=Network Support
   TITLE:=Wireguard kernel module
-  DEPENDS:=+IPV6:kmod-udptunnel6 +kmod-udptunnel4 +kmod-ipt-hashlimit
+  DEPENDS:=+IPV6:kmod-udptunnel6 +kmod-udptunnel4
   FILES:= $(PKG_BUILD_DIR)/src/wireguard.$(LINUX_KMOD_SUFFIX)
   AUTOLOAD:=$(call AutoProbe,wireguard)
 endef
