@@ -113,8 +113,7 @@ CONFIGURE_ARGS += \
 	--with-gssapi=no \
 	--with-ecdsa=$(if $(CONFIG_OPENSSL_WITH_EC),yes,no) \
 	--with-readline=no \
-	--sysconfdir=/etc/bind \
-	--with-libjson="$(STAGING_DIR)/usr"
+	--sysconfdir=/etc/bind
 
 ifdef CONFIG_BIND_ENABLE_FILTER_AAAA
 	CONFIGURE_ARGS += \
