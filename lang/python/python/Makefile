@@ -12,7 +12,7 @@ include ./files/python-version.mk
 
 PKG_NAME:=python
 PKG_VERSION:=$(PYTHON_VERSION).$(PYTHON_VERSION_MICRO)
-PKG_RELEASE:=6
+PKG_RELEASE:=7
 
 PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://www.python.org/ftp/python/$(PKG_VERSION)
@@ -189,6 +189,16 @@ define Build/Compile
 	$(call Build/Compile/python-pip)
 endef
 
+define Build/InstallMkFiles
+	$(INSTALL_DIR) $(STAGING_DIR)/mk/
+	$(INSTALL_DATA) \
+		./files/python-package.mk \
+		./files/python-host.mk \
+		./files/python-version.mk \
+		./files/python-package-install.sh \
+		$(STAGING_DIR)/mk/
+endef
+
 # Install python2-config for Samba 4
 # Do not copy 'python-config', which may conflict with python3
 define Build/InstallDev
@@ -212,6 +222,7 @@ define Build/InstallDev
 	$(CP) \
 		$(PKG_INSTALL_DIR)/usr/bin/python2*-config \
 		$(1)/usr/bin/
+	$(call Build/InstallMkFiles)
 endef
 
 PYTHON_BASE_LIB_FILES:= \
@@ -292,19 +303,10 @@ HOST_CONFIGURE_ARGS+= \
 	CONFIG_SITE=
 
 define Host/Install
+	$(call Build/InstallMkFiles)
 	$(MAKE) -C $(HOST_BUILD_DIR) install
-	$(INSTALL_DIR) $(HOST_PYTHON_DIR)/bin/ $(STAGING_DIR)/mk/
+	$(INSTALL_DIR) $(HOST_PYTHON_DIR)/bin/
 	$(INSTALL_BIN) $(HOST_BUILD_DIR)/Parser/pgen $(HOST_PYTHON_DIR)/bin/pgen2
-	# Install these mk files in the Host/Install phase ;
-	# The Build/InstallDev rule is activated only for target builds.
-	# But if someone needs only the host Python, then
-	# these files need to be installed in this phase, and not Build/InstallDev
-	$(INSTALL_DATA) \
-		./files/python-package.mk \
-		./files/python-host.mk \
-		./files/python-version.mk \
-		./files/python-package-install.sh \
-		$(STAGING_DIR)/mk/
 endef
 
 $(eval $(call HostBuild))
