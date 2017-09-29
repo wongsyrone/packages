@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=php
 PKG_VERSION:=7.1.9
-PKG_RELEASE:=1
+PKG_RELEASE:=3
 
 PKG_MAINTAINER:=Michael Heimpold <mhei@heimpold.de>
 
@@ -133,7 +133,7 @@ endef
 
 define Package/php7-fpm
   $(call Package/php7/Default)
-  DEPENDS+= +php7-cgi
+  DEPENDS+= +PACKAGE_php7-mod-intl:libstdcpp
   TITLE+= (FPM)
 endef
 
