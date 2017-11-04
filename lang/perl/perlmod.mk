@@ -1,7 +1,7 @@
 # This makefile simplifies perl module builds.
 #
 
-PERL_VERSION:=5.24
+PERL_VERSION:=5.26
 
 # Build environment
 HOST_PERL_PREFIX:=$(STAGING_DIR_HOSTPKG)/usr
@@ -57,7 +57,7 @@ define perlmod/Configure
 	(cd $(if $(3),$(3),$(PKG_BUILD_DIR)); \
 	PERL_MM_USE_DEFAULT=1 \
 	$(2) \
-	$(PERL_CMD) -MConfig -e '$$$${tied %Config::Config}{cpprun}="$(GNU_TARGET_NAME)-cpp -E"; do "Makefile.PL"' \
+	$(PERL_CMD) -MConfig -e '$$$${tied %Config::Config}{cpprun}="$(GNU_TARGET_NAME)-cpp -E"; unshift(@INC, "."); unless (defined (do "./Makefile.PL")) { if ($$$$@) { die "couldn\047t parse Makefile.PL: $$$$@"; } else { die "couldn\047t do Makefile.PL: $$$$!"; } }; die "No Makefile generated!" unless -f "Makefile";' \
 		$(1) \
 		AR=ar \
 		CC=$(GNU_TARGET_NAME)-gcc \
