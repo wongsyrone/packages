@@ -55,6 +55,9 @@ CONFIGURE_ARGS+= \
 	--disable-ssp \
 	$(if $(CONFIG_LIBSODIUM_MINIMAL),--enable-minimal=yes,--enable-minimal=no)
 
+# redef CFLAGS, replace -O* with -O3
+TARGET_CFLAGS := $(filter-out -O%,$(TARGET_CFLAGS)) -O3
+
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/sodium
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/sodium.h $(1)/usr/include
