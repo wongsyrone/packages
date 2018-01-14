@@ -8,11 +8,11 @@
 include $(TOPDIR)/rules.mk
 
 # For PYTHON_VERSION
-include ./files/python-version.mk
+include ../python-version.mk
 
 PKG_NAME:=python
 PKG_VERSION:=$(PYTHON_VERSION).$(PYTHON_VERSION_MICRO)
-PKG_RELEASE:=7
+PKG_RELEASE:=8
 
 PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://www.python.org/ftp/python/$(PKG_VERSION)
@@ -22,10 +22,10 @@ PKG_LICENSE:=PSF
 PKG_LICENSE_FILES:=LICENSE Modules/_ctypes/libffi_msvc/LICENSE Modules/_ctypes/darwin/LICENSE Modules/_ctypes/libffi/LICENSE Modules/_ctypes/libffi_osx/LICENSE Tools/pybench/LICENSE
 
 # This file provides the necsessary host build variables
-include ./files/python-host.mk
+include ../python-host.mk
 
 # For PyPackage
-include ./files/python-package.mk
+include ../python-package.mk
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
@@ -190,16 +190,6 @@ define Build/Compile
 	$(call Build/Compile/python-pip)
 endef
 
-define Build/InstallMkFiles
-	$(INSTALL_DIR) $(STAGING_DIR)/mk/
-	$(INSTALL_DATA) \
-		./files/python-package.mk \
-		./files/python-host.mk \
-		./files/python-version.mk \
-		./files/python-package-install.sh \
-		$(STAGING_DIR)/mk/
-endef
-
 # Install python2-config for Samba 4
 # Do not copy 'python-config', which may conflict with python3
 define Build/InstallDev
@@ -303,7 +293,6 @@ define Host/Compile
 endef
 
 define Host/Install
-	$(call Build/InstallMkFiles)
 	$(MAKE) -C $(HOST_BUILD_DIR) install
 	$(INSTALL_DIR) $(HOST_PYTHON_DIR)/bin/
 	$(INSTALL_BIN) $(HOST_BUILD_DIR)/Parser/pgen $(HOST_PYTHON_DIR)/bin/pgen2

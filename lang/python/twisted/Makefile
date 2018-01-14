@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=twisted
 PKG_VERSION:=16.4.1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=Twisted-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://pypi.python.org/packages/6b/23/8dbe86fc83215015e221fbd861a545c6ec5c9e9cd7514af114d1f64084ab \
@@ -17,14 +17,14 @@ PKG_SOURCE_URL:=https://pypi.python.org/packages/6b/23/8dbe86fc83215015e221fbd86
 PKG_HASH:=1d8d73f006c990744effb35588359fd44d43608649ac0b6b7edc71176e88e816
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/Twisted-$(PKG_VERSION)
-PKG_BUILD_DEPENDS:=python python-setuptools USE_MUSL:librpc
+PKG_BUILD_DEPENDS:=USE_MUSL:librpc
 
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=Jeffery To <jeffery.to@gmail.com>
 
 include $(INCLUDE_DIR)/package.mk
-$(call include_mk, python-package.mk)
+include ../python-package.mk
 
 define Package/twisted
   SUBMENU:=Python
@@ -32,7 +32,7 @@ define Package/twisted
   CATEGORY:=Languages
   TITLE:=Python networking engine
   URL:=http://twistedmatrix.com/
-  DEPENDS:=+python-light +zope-interface
+  DEPENDS:=+python-light +python-zope-interface
 endef
 
 define Package/twisted/description
