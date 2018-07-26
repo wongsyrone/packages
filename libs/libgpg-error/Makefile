@@ -8,17 +8,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libgpg-error
-PKG_VERSION:=1.25
+PKG_VERSION:=1.32
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=ftp://ftp.gnupg.org/gcrypt/libgpg-error
-PKG_HASH:=f628f75843433b38b05af248121beb7db5bd54bb2106f384edac39934261320c
+PKG_SOURCE_URL:=https://www.gnupg.org/ftp/gcrypt/libgpg-error/
+PKG_HASH:=c345c5e73cc2332f8d50db84a2280abfb1d8f6d4f1858b9daa30404db44540ca
 PKG_LICENSE:=LGPL-2.1+
 PKG_LICENSE_FILES:=COPYING
 
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
+
+PKG_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -43,32 +45,7 @@ TARGET_CFLAGS += $(FPIC)
 CONFIGURE_ARGS += \
 	--enable-shared \
 	--enable-static \
-	--disable-rpath \
-	--disable-doc \
-	--disable-tests
-
-# Arch detection hacks, we need to copy correct header file
-ifeq ($(ARCH),arm)
-	TUPLE:=arm-unknown-linux-gnueabi
-endif
-ifeq ($(ARCH),mips)
-	TUPLE:=mips-unknown-linux-gnu
-endif
-ifeq ($(ARCH),mipsel)
-	TUPLE:=mipsel-unknown-linux-gnu
-endif
-# 	arm)	      TUPLE=arm-unknown-linux-gnueabi \
-	armeb)      TUPLE=arm-unknown-linux-gnueabi \
-	i586|i686)  TUPLE=i686-pc-linux-gnu \
-	mips64el)   TUPLE=mipsel-unknown-linux-gnu \
-	mips64)     TUPLE=mips-unknown-linux-gnu \
-	x86_64)     TUPLE=x86_64-pc-linux-gnu \
-	*)          TUPLE=$(ARCH)-unknown-linux-gnu
-define Build/Prepare
-	$(call Build/Prepare/Default)
-	$(CP) $(PKG_BUILD_DIR)/src/syscfg/lock-obj-pub.$(TUPLE).h \
-		$(PKG_BUILD_DIR)/src/syscfg/lock-obj-pub.linux-gnu.h
-endef
+	--disable-rpath
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(2)/bin $(1)/usr/bin
