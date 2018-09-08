@@ -41,7 +41,11 @@ TARGET_CFLAGS += $(FPIC)
 
 CONFIGURE_ARGS += \
 	--enable-shared \
-	--enable-static
+	--enable-static \
+	--without-docbook
+
+HOST_CONFIGURE_ARGS += \
+	--without-docbook
 
 define Host/Install
 	$(MAKE) -C $(HOST_BUILD_DIR) install
