@@ -23,6 +23,8 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/unixODBC-$(PKG_VERSION)
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/unixODBC-$(PKG_VERSION)
 HOST_BUILD_DEPENDS:=unixodbc
 
+PKG_FIXUP:=autoreconf
+
 # if your other package depends on unixodbc and needs
 # odbc_config, add to your other Makefile
 #  PKG_BUILD_DEPENDS:=unixodbc/host

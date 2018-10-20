@@ -26,13 +26,13 @@ mwan3_rtmon_ipv4()
 	local idx=0
 	local ret=1
 	mkdir -p /tmp/mwan3rtmon
-	($IP4 route list table main  | grep -v ^default | sort -n; echo empty fixup) >/tmp/mwan3rtmon/ipv4.main
+	($IP4 route list table main  | grep -v "^default\|linkdown" | sort -n; echo empty fixup) >/tmp/mwan3rtmon/ipv4.main
 	while uci get mwan3.@interface[$idx] >/dev/null 2>&1 ; do
 		idx=$((idx+1))
 		tid=$idx
 		[ "$(uci get mwan3.@interface[$((idx-1))].family)" = "ipv4" ] && {
 			if $IP4 route list table $tid | grep -q ^default; then
-				($IP4 route list table $tid  | grep -v ^default | sort -n; echo empty fixup) >/tmp/mwan3rtmon/ipv4.$tid
+				($IP4 route list table $tid  | grep -v "^default\|linkdown" | sort -n; echo empty fixup) >/tmp/mwan3rtmon/ipv4.$tid
 				cat /tmp/mwan3rtmon/ipv4.$tid | grep -v -x -F -f /tmp/mwan3rtmon/ipv4.main | while read line; do
 					$IP4 route del table $tid $line
 				done
@@ -346,7 +346,7 @@ mwan3_delete_iface_iptables()
 
 mwan3_create_iface_route()
 {
-	local id route_args
+	local id route_args metric
 
 	config_get family $1 family ipv4
 	mwan3_get_iface_id id $1
@@ -366,6 +366,11 @@ mwan3_create_iface_route()
 			route_args=""
 		fi
 
+		network_get_metric metric $1
+		if [ -n "$metric" -a "$metric" != "0" ]; then
+			route_args="$route_args metric $metric"
+		fi
+
 		$IP4 route flush table $id
 		$IP4 route add table $id default $route_args dev $2
 		mwan3_rtmon_ipv4
@@ -382,6 +387,11 @@ mwan3_create_iface_route()
 			route_args="via $route_args"
 		else
 			route_args=""
+		fi
+
+		network_get_metric metric $1
+		if [ -n "$metric" -a "$metric" != "0" ]; then
+			route_args="$route_args metric $metric"
 		fi
 
 		$IP6 route flush table $id
