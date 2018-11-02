@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pytz
-PKG_VERSION:=2018.5
+PKG_VERSION:=2018.6
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://files.pythonhosted.org/packages/source/p/pytz
-PKG_HASH:=ffb9ef1de172603304d9d2819af6f5ece76f2e85ec10692a524dd876e72bf277
+PKG_HASH:=642253af8eae734d1509fc6ac9c1aee5e5b69d76392660889979b9870610a46b
 
 include $(INCLUDE_DIR)/package.mk
 include ../python-package.mk
@@ -35,6 +35,13 @@ endef
 
 define Build/Compile
 	$(call Build/Compile/PyMod,,install --prefix=/usr --root=$(PKG_INSTALL_DIR))
+endef
+
+define Package/pytz/InstallDev
+	$(INSTALL_DIR) $(1)$(PYTHON_PKG_DIR)
+	$(CP) \
+	    $(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
+	    $(1)$(PYTHON_PKG_DIR)
 endef
 
 define Package/pytz/install
