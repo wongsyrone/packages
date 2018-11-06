@@ -2,7 +2,7 @@ version: 2.0
 jobs:
   build:
     docker:
-      - image: champtar/openwrtpackagesci@sha256:4d8bea09b6fd51e015f417a8f0056b914d0db6aa9829b0049065a077f52a91e9
+      - image: champtar/openwrtpackagesci@sha256:d46da22bc628f4b369147eebfa1b032e4066510da42a073b22acbf6b6595b77f
     environment:
       - SDK_BASE_URL: "https://downloads.lede-project.org/snapshots/targets/ar71xx/generic"
       - SDK_FILE: "openwrt-sdk-ar71xx-generic_gcc-7.3.0_musl.Linux-x86_64.tar.xz"
