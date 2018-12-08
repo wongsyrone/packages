@@ -2,6 +2,7 @@ FROM debian:9
 
 RUN apt update && apt install -y \
 build-essential \
+curl \
 jq \
 gawk \
 gettext \
@@ -11,8 +12,15 @@ libssl-dev \
 python \
 subversion \
 time \
+wget \
 zlib1g-dev \
+unzip \
+xz-utils \
 && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -c "OpenWrt Builder" -m -d /home/build -s /bin/bash build
+USER build
+ENV HOME /home/build
 
 # LEDE Build System (LEDE GnuPG key for unattended build jobs)
 RUN curl 'https://git.openwrt.org/?p=keyring.git;a=blob_plain;f=gpg/626471F1.asc' | gpg --import \
