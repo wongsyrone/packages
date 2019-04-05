@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tor
 PKG_VERSION:=0.3.5.8
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://dist.torproject.org/ \
@@ -18,7 +18,7 @@ PKG_HASH:=d5c56603942a8927670f50a4a469fb909e29d3571fdd013389d567e57abc0b47
 PKG_MAINTAINER:=Hauke Mehrtens <hauke@hauke-m.de> \
 		Peter Wagner <tripolar@gmx.at>
 PKG_LICENSE_FILES:=LICENSE
-PKG_CPE_ID:=cpe:/:a:torproject:tor
+PKG_CPE_ID:=cpe:/a:torproject:tor
 
 PKG_INSTALL:=1
 PKG_FIXUP:=autoreconf
@@ -100,6 +100,7 @@ CONFIGURE_ARGS += \
 	--disable-libscrypt \
 	--disable-unittests \
 	--disable-lzma \
+	--disable-zstd \
 	--with-tor-user=tor \
 	--with-tor-group=tor
 
