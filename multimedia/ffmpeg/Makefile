@@ -9,12 +9,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ffmpeg
-PKG_VERSION:=3.4.6
+PKG_VERSION:=4.1.3
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://ffmpeg.org/releases/
-PKG_HASH:=3572279cb139d9e39dcfbc23edf438ff5311ec3fc5d0dcb3558e49591e5cb83e
+PKG_HASH:=0c3020452880581a8face91595b239198078645e7d7184273b8bcc7758beb63d
 PKG_MAINTAINER:=Ted Hess <thess@kitschensync.net>, \
 		Ian Leonard <antonlacon@gmail.com>
 
@@ -410,6 +410,12 @@ FFMPEG_CONFIGURE:= \
 	--enable-cross-compile \
 	--cross-prefix="$(TARGET_CROSS)" \
 	--arch="$(ARCH)" \
+	--ar="$(TARGET_AR)" \
+	--ranlib="$(TARGET_RANLIB)" \
+	--nm="$(TARGET_NM)" \
+	--as="$(TARGET_CC) -c $(TARGET_ASFLAGS)" \
+	--cc="$(TARGET_CC)" \
+	--cxx="$(TARGET_CXX)" \
 	$(if $(REAL_CPU_TYPE),--cpu=$(call qstrip,$(REAL_CPU_TYPE)),) \
 	--target-os=linux \
 	--pkg-config="$(STAGING_DIR_HOST)/bin/pkg-config" \
