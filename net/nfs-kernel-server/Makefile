@@ -138,7 +138,8 @@ HOST_CONFIGURE_ARGS += \
 	--disable-gss \
 	--disable-nfsv4 \
 	--disable-nfsv41 \
-	--without-tcp-wrappers
+	--without-tcp-wrappers \
+	--with-rpcgen=internal
 
 HOST_CONFIGURE_VARS += \
 	ac_cv_lib_event_event_dispatch=yes \
