@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bluez
 PKG_VERSION:=5.50
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/bluetooth/
@@ -30,24 +30,12 @@ define Package/bluez/Default
   URL:=http://www.bluez.org/
 endef
 
-define Package/bluez-examples
-$(call Package/bluez/Default)
-  SECTION:=utils
-  CATEGORY:=Utilities
-  TITLE+= python example apps
-  DEPENDS:=+python
-endef
-
-define Package/bluez-examples/description
-  contains many examples apps for bluetooth, requiring python
-endef
-
 define Package/bluez-libs
 $(call Package/bluez/Default)
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE+= library
-  DEPENDS:=+libpthread +kmod-bluetooth
+  DEPENDS:=+libpthread +USB_SUPPORT:kmod-bluetooth
 endef
 
 define Package/bluez-utils
@@ -106,11 +94,6 @@ define Build/InstallDev
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/bluez.pc $(1)/usr/lib/pkgconfig/
 endef
 
-define Package/bluez-examples/install
-	$(INSTALL_DIR) $(1)/usr/bin/bluez
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/test/* $(1)/usr/bin/bluez/
-endef
-
 define Package/bluez-libs/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libbluetooth.so.* $(1)/usr/lib/
@@ -155,7 +138,6 @@ define Package/bluez-daemon/install
 	$(INSTALL_BIN) ./files/bluetoothd.init $(1)/etc/init.d/bluetoothd
 endef
 
-$(eval $(call BuildPackage,bluez-examples))
 $(eval $(call BuildPackage,bluez-libs))
 $(eval $(call BuildPackage,bluez-utils))
 $(eval $(call BuildPackage,bluez-daemon))
