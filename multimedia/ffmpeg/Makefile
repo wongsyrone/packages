@@ -407,25 +407,22 @@ REAL_CPU_TYPE:=$(firstword $(subst +, ,$(CONFIG_CPU_TYPE)))
 REAL_CPU_TYPE:=$(subst octeonplus,octeon+,$(REAL_CPU_TYPE))
 
 FFMPEG_CONFIGURE:= \
+	CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS) $(FPIC)" \
+	LDFLAGS="$(TARGET_LDFLAGS)" \
+	./configure \
 	--enable-cross-compile \
 	--cross-prefix="$(TARGET_CROSS)" \
 	--arch="$(ARCH)" \
-	--ar="$(TARGET_AR)" \
-	--ranlib="$(TARGET_RANLIB)" \
-	--nm="$(TARGET_NM)" \
-	--as="$(TARGET_CC) -c $(TARGET_ASFLAGS)" \
-	--cc="$(TARGET_CC)" \
-	--cxx="$(TARGET_CXX)" \
 	$(if $(REAL_CPU_TYPE),--cpu=$(call qstrip,$(REAL_CPU_TYPE)),) \
 	--target-os=linux \
-	--pkg-config="$(STAGING_DIR_HOST)/bin/pkg-config" \
+	--prefix="/usr" \
+	--pkg-config="pkg-config" \
 	--enable-shared \
 	--enable-static \
 	--enable-pthreads \
 	--enable-zlib \
 	--disable-doc \
 	--disable-debug \
-	--disable-bzlib \
 	\
 	--disable-lzma \
 	--disable-vaapi \
@@ -666,21 +663,9 @@ ifneq ($(CONFIG_TARGET_x86),)
   TARGET_CFLAGS+= -fomit-frame-pointer
 endif
 
-# Taken from package-defaults.mk
-CONFIGURE_ARGS:= \
-	--prefix=$(CONFIGURE_PREFIX) \
-	--bindir=$(CONFIGURE_PREFIX)/bin \
-	--datadir=$(CONFIGURE_PREFIX)/share \
-	--mandir=$(CONFIGURE_PREFIX)/man \
-	$(FFMPEG_CONFIGURE)
-
-# Suppress some warnings
-TARGET_CFLAGS+= \
-	$(FPIC) \
-	-Wno-unused-but-set-variable \
-	-Wno-deprecated-declarations \
-	-Wno-unused-function \
-	-Wno-unused-result
+define Build/Configure
+	( cd $(PKG_BUILD_DIR); $(FFMPEG_CONFIGURE) )
+endef
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
@@ -767,10 +752,14 @@ define Package/ffprobe/install
 	$(CP) $(PKG_INSTALL_DIR)/usr/bin/ffprobe $(1)/usr/bin/
 endef
 
+Package/ffprobe-custom/install = $(Package/ffprobe/install)
+
 define Package/ffserver/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(CP) $(PKG_INSTALL_DIR)/usr/bin/ffserver $(1)/usr/bin/
 endef
+
+Package/ffserver-custom/install = $(Package/ffserver/install)
 
 define Package/libffmpeg-custom/install
 	$(INSTALL_DIR) $(1)/usr/lib
