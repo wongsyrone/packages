@@ -9,33 +9,36 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=seafile-seahub
 PKG_VERSION:=6.3.4
-PKG_RELEASE:=4
-PKG_LICENSE:=Apache-2.0
+PKG_RELEASE:=6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/haiwen/seahub/tar.gz/v$(PKG_VERSION)-server?
 PKG_HASH:=53a9efdb6791fd3a2a191e89cb0f133632056046ec08adbb2ad72088e6161430
-PKG_BUILD_DIR:=$(BUILD_DIR)/seahub-$(PKG_VERSION)-server
+
+PKG_MAINTAINER:=Alexandru Ardelean <ardeleanalex@gmail.com>
+PKG_LICENSE:=Apache-2.0
+PKG_LICENSE_FILES:=LICENSE.txt
 
 HOST_PYTHON_PACKAGE_BUILD_DEPENDS:="django>=1.11"
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/seahub-$(PKG_VERSION)-server
 
 include $(INCLUDE_DIR)/package.mk
 include ../../lang/python/python-package.mk
 
 SEAFILE_PYTHON_DEPENDS:= \
 	simplejson chardet dateutil mysql pytz qrcode requests requests-oauthlib \
-	django django-constance
+	django django-constance django-appconf django-compressor django-formtools \
+	django-jsonfield django-picklefield django-postoffice django-restframework
 
 define Package/seafile-seahub
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Seafile server - seahub component
   URL:=https://seafile.com/
-  DEPENDS:=+python +pillow +django-appconf \
-	+django-compressor +django-formtools +django-jsonfield \
-	+django-picklefield +django-postoffice +django-restframework \
+  DEPENDS:=+python +pillow \
 	+django-simple-captcha +django-statici18n +django-webpack-loader \
-	+flup +gunicorn +openpyxl \
+	+python-flup +gunicorn +openpyxl \
 	$(foreach dep,$(SEAFILE_PYTHON_DEPENDS),+python-$(dep))
 endef
 

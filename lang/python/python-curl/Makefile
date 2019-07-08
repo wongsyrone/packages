@@ -55,19 +55,27 @@ $(call Package/python-curl/description)
 (Variant for Python3)
 endef
 
+PYTHON_PKG_SETUP_ARGS:=
+PYTHON3_PKG_SETUP_ARGS:=
+
 ifdef CONFIG_LIBCURL_OPENSSL
-  PYTHON_PKG_SETUP_ARGS:=--with-openssl
-  PYTHON3_PKG_SETUP_ARGS:=--with-openssl
+  PYTHON_PKG_SETUP_ARGS+=--with-openssl
+  PYTHON3_PKG_SETUP_ARGS+=--with-openssl
 endif
 
 ifdef CONFIG_LIBCURL_GNUTLS
-  PYTHON_PKG_SETUP_ARGS:=--with-gnutls
-  PYTHON3_PKG_SETUP_ARGS:=--with-gnutls
+  PYTHON_PKG_SETUP_ARGS+=--with-gnutls
+  PYTHON3_PKG_SETUP_ARGS+=--with-gnutls
 endif
 
 ifdef CONFIG_LIBCURL_MBEDTLS
-  PYTHON_PKG_SETUP_ARGS:=--with-mbedtls
-  PYTHON3_PKG_SETUP_ARGS:=--with-mbedtls
+  PYTHON_PKG_SETUP_ARGS+=--with-mbedtls
+  PYTHON3_PKG_SETUP_ARGS+=--with-mbedtls
+endif
+
+ifdef CONFIG_LIBCURL_WOLFSSL
+  PYTHON_PKG_SETUP_ARGS+=--with-wolfssl
+  PYTHON3_PKG_SETUP_ARGS+=--with-wolfssl
 endif
 
 $(eval $(call PyPackage,python-curl))
