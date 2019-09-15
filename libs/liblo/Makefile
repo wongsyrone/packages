@@ -9,14 +9,14 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=liblo
 PKG_VERSION:=0.30
-PKG_RELEASE:=1
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@SF/liblo
 PKG_HASH:=30a7c9de49a25ed7f2425a7a7415f5b14739def62431423d3419ea26fb978d1b
 
 PKG_MAINTAINER:=
-PKG_LICENSE:=LGPL-2.1+
+PKG_LICENSE:=LGPL-2.1-or-later
 PKG_LICENSE_FILES:=COPYING
 
 PKG_INSTALL:=1
@@ -44,6 +44,13 @@ $(call Package/liblo/Default)
   TITLE+= utilities
   DEPENDS:= +liblo
 endef
+
+CONFIGURE_ARGS += \
+	$(if $(CONFIG_IPV6),--enable,--disable)-ipv6 \
+	--enable-threads \
+	--disable-examples \
+	--disable-network-tests \
+	--disable-tests
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
