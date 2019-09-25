@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pulseaudio
 PKG_VERSION:=12.2
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://freedesktop.org/software/pulseaudio/releases/
@@ -17,6 +17,7 @@ PKG_HASH:=809668ffc296043779c984f53461c2b3987a45b7a25eb2f0a1d11d9f23ba4055
 
 PKG_LICENSE:=LGPL-2.1-or-later
 PKG_LICENSE_FILES:=GPL LICENSE
+PKG_CPE_ID:=cpe:/a:pulseaudio:pulseaudio
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
@@ -116,6 +117,7 @@ CONFIGURE_ARGS += \
 	--disable-jack \
 	--disable-asyncns \
 	--disable-lirc \
+	--disable-tests \
 	--disable-udev \
 	--without-fftw \
 	--without-soxr \

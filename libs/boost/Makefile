@@ -13,7 +13,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=boost
 PKG_VERSION:=1.71.0
 PKG_SOURCE_VERSION:=1_71_0
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)_$(PKG_SOURCE_VERSION).tar.bz2
 PKG_SOURCE_URL:=@SF/$(PKG_NAME)/$(PKG_NAME)/$(PKG_VERSION) https://dl.bintray.com/boostorg/release/$(PKG_VERSION)/source/
@@ -22,6 +22,7 @@ PKG_HASH:=d73a8da01e8bf8c7eda40b4c84915071a8c8a0df4a6734537ddde4a8580524ee
 PKG_MAINTAINER:=Carlos M. Ferreira <carlosmf.pt@gmail.com>
 PKG_LICENSE:=BSL-1.0
 PKG_LICENSE_FILES:=LICENSE_1_0.txt
+PKG_CPE_ID:=cpe:/a:boost:boost
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)_$(PKG_SOURCE_VERSION)
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)_$(PKG_SOURCE_VERSION)
@@ -129,7 +130,7 @@ define Package/boost/config
 
 	config boost-fiber-exclude
 		bool
-		default y if (TARGET_brcm47xx_generic || TARGET_brcm47xx_legacy || mips32 || mips64 || boost-coroutine-exclude)
+		default y if (TARGET_ar7 || TARGET_brcm47xx_generic || TARGET_brcm47xx_legacy || TARGET_lantiq_ase || TARGET_rb532 || mips32 || mips64 || boost-coroutine-exclude)
 		default n
 
 	menu "Select Boost Options"
@@ -366,7 +367,7 @@ define Host/Compile
 
 	( cd $(HOST_BUILD_DIR) ; \
 		./bootstrap.sh --prefix=$(STAGING_DIR_HOSTPKG) \
-			--with-libraries=atomic,chrono,date_time,filesystem,headers,thread,system ;\
+			--with-libraries=atomic,context,date_time,filesystem,headers,program_options,regex,system,thread ;\
 		./b2 --ignore-site-config install )
 endef
 
