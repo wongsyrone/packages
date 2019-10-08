@@ -38,27 +38,37 @@ define Package/libid3tag/description
 	ID3v1 and the various versions of ID3v2.
 endef
 
-TARGET_CFLAGS += $(FPIC)
-
 # If you get stuck, please install gperf first.
 GPERF := $(shell command -v gperf)
 ifndef GPERF
 	$(error Please install gperf)
 endif
 
-CONFIGURE_ARGS+= \
-	--enable-shared \
-	--enable-static \
-	--disable-debugging \
-	--disable-profiling
+TARGET_CFLAGS += $(FPIC)
+
+CONFIGURE_VARS += CC="$(TARGET_CC) $(TARGET_CFLAGS)"
+
+define Build/Prepare
+	$(call Build/Prepare/Default)
+	$(SED) 's,@VERSION@,$(PKG_VERSION),g' $(PKG_BUILD_DIR)/id3tag.pc
+endef
+
+define Build/Configure
+	$(call Build/Configure/Default, \
+		--enable-shared \
+		--enable-static \
+		--disable-debugging \
+		--disable-profiling \
+	)
+endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/id3tag.h $(1)/usr/include/
-	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/id3tag.pc $(1)/usr/lib/pkgconfig/
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libid3tag.{a,so*} $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig/
+	$(CP) $(PKG_BUILD_DIR)/id3tag.pc $(1)/usr/lib/pkgconfig/
 endef
 
 define Package/libid3tag/install
