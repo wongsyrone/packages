@@ -9,18 +9,18 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=kea
-PKG_VERSION:=1.5.0
-PKG_RELEASE:=5
+PKG_VERSION:=1.6.0
+PKG_RELEASE:=7
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://ftp.isc.org/isc/kea/$(PKG_VERSION)
-PKG_HASH:=edce4fab68ca7af607cf7f5bc86596e04fe0ef4b8e88906e339cdefcf21daaec
+PKG_HASH:=44ed48c729e4618fffcf0086529b469f7232990983187b2f71fce89f1ac6e270
 
 PKG_MAINTAINER:=BangLang Huang<banglang.huang@foxmail.com>, Rosy Song<rosysong@rosinson.com>
 PKG_LICENSE:=MPL-2.0
 PKG_LICENSE_FILES:=COPYING
 
-HOST_BUILD_DEPENDS:=boost/host log4cplus/host openssl
+HOST_BUILD_DEPENDS:=boost/host log4cplus/host
 PKG_BUILD_DEPENDS:=kea/host
 HOST_BUILD_PARALLEL:=1
 PKG_BUILD_PARALLEL:=1
@@ -147,9 +147,10 @@ endef
 HOST_CONFIGURE_ARGS += \
 	--with-boost-include="$(STAGING_DIR_HOSTPKG)" \
 	--with-log4cplus="$(STAGING_DIR_HOSTPKG)" \
-	--with-openssl="$(STAGING_DIR)/usr" \
+	--with-openssl="$(STAGING_DIR_HOST)" \
 	--enable-boost-headers-only \
-	--enable-static-link
+	--enable-static-link \
+	--enable-generate-messages
 
 HOST_LDFLAGS += \
 	 -Wl,--gc-sections,--as-needed
@@ -229,7 +230,6 @@ define Package/kea-ctrl/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/kea-ctrl-agent $(1)/usr/sbin/kea-ctrl-agent
 	$(CP) $(PKG_INSTALL_DIR)/etc/kea/keactrl.conf $(1)/etc/kea/
 	$(CP) $(PKG_INSTALL_DIR)/etc/kea/kea-ctrl-agent.conf $(1)/etc/kea/
-	$(CP) $(PKG_INSTALL_DIR)/etc/kea/kea-netconf.conf $(1)/etc/kea/
 endef
 
 define Package/kea-lfc/install
