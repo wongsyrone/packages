@@ -1,13 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=python-zipp
-PKG_VERSION:=2.0.1
+PKG_VERSION:=2.2.0
 PKG_RELEASE:=1
 
 PYPI_NAME:=zipp
-PKG_HASH:=b338014b9bc7102ca69e0fb96ed07215a8954d2989bc5d83658494ab2ba634af
+PKG_HASH:=5c56e330306215cd3553342cfafc73dda2c60792384117893f3a83f8a1209f50
 
-PKG_MAINTAINER:=Paul Spooren <mail@aparcar.org>, Jan Pavlinec <jan.pavlinec@nic.cz>
+PKG_MAINTAINER:=Jan Pavlinec <jan.pavlinec@nic.cz>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
 

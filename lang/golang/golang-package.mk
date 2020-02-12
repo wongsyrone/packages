@@ -114,7 +114,6 @@ GO_PKG_WORK_DIR:=$(PKG_BUILD_DIR)/$(GO_PKG_WORK_DIR_NAME)
 
 GO_PKG_BUILD_DIR:=$(GO_PKG_WORK_DIR)/build
 GO_PKG_CACHE_DIR:=$(GO_PKG_WORK_DIR)/cache
-GO_PKG_TMP_DIR:=$(GO_PKG_WORK_DIR)/tmp
 
 GO_PKG_BUILD_BIN_DIR:=$(GO_PKG_BUILD_DIR)/bin$(if $(GO_HOST_TARGET_DIFFERENT),/$(GO_OS_ARCH))
 
@@ -166,7 +165,7 @@ define GoPackage/GoSubMenu
   CATEGORY:=Languages
 endef
 
-define GoPackage/Environment/Default
+define GoPackage/Environment/Target
 	GOOS=$(GO_OS) \
 	GOARCH=$(GO_ARCH) \
 	GO386=$(GO_386) \
@@ -174,9 +173,23 @@ define GoPackage/Environment/Default
 	GOMIPS=$(GO_MIPS) \
 	GOMIPS64=$(GO_MIPS64) \
 	CGO_ENABLED=1 \
+	CC=$(TARGET_CC) \
+	CXX=$(TARGET_CXX) \
 	CGO_CFLAGS="$(filter-out $(GO_CFLAGS_TO_REMOVE),$(TARGET_CFLAGS))" \
 	CGO_CPPFLAGS="$(TARGET_CPPFLAGS)" \
-	CGO_CXXFLAGS="$(filter-out $(GO_CFLAGS_TO_REMOVE),$(TARGET_CXXFLAGS))"
+	CGO_CXXFLAGS="$(filter-out $(GO_CFLAGS_TO_REMOVE),$(TARGET_CXXFLAGS))" \
+	CGO_LDFLAGS="$(TARGET_LDFLAGS)"
+endef
+
+define GoPackage/Environment/Build
+	GOPATH=$(GO_PKG_BUILD_DIR) \
+	GOCACHE=$(GO_PKG_CACHE_DIR) \
+	GOENV=off
+endef
+
+define GoPackage/Environment/Default
+	$(call GoPackage/Environment/Target) \
+	$(call GoPackage/Environment/Build)
 endef
 
 GoPackage/Environment=$(call GoPackage/Environment/Default)
@@ -189,8 +202,7 @@ GoPackage/has_binaries=$(call GoPackage/is_dir_not_empty,$(GO_PKG_BUILD_BIN_DIR)
 define GoPackage/Build/Configure
 	( \
 		cd $(PKG_BUILD_DIR) ; \
-		mkdir -p $(GO_PKG_BUILD_DIR)/bin $(GO_PKG_BUILD_DIR)/src \
-			$(GO_PKG_CACHE_DIR) $(GO_PKG_TMP_DIR) ; \
+		mkdir -p $(GO_PKG_BUILD_DIR)/bin $(GO_PKG_BUILD_DIR)/src $(GO_PKG_CACHE_DIR) ; \
 		\
 		files=$$$$($(FIND) ./ \
 			-type d -a \( -path './.git' -o -path './$(GO_PKG_WORK_DIR_NAME)' \) -prune -o \
@@ -266,13 +278,7 @@ endef
 define GoPackage/Build/Compile
 	( \
 		cd $(GO_PKG_BUILD_DIR) ; \
-		export GOPATH=$(GO_PKG_BUILD_DIR) \
-			GOCACHE=$(GO_PKG_CACHE_DIR) \
-			GOTMPDIR=$(GO_PKG_TMP_DIR) \
-			GOROOT_FINAL=$(GO_TARGET_ROOT) \
-			CC=$(TARGET_CC) \
-			CXX=$(TARGET_CXX) \
-			$(call GoPackage/Environment) ; \
+		export $(call GoPackage/Environment) ; \
 		\
 		echo "Finding targets" ; \
 		targets=$$$$(go list $(GO_PKG_BUILD_PKG)) ; \

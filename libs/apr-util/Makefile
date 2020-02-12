@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=apr-util
 PKG_VERSION:=1.6.1
-PKG_RELEASE:=4
+PKG_RELEASE:=6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=@APACHE/apr/
@@ -106,7 +106,13 @@ endif
 
 CONFIGURE_VARS += \
 	ac_cv_path_ODBC_CONFIG= \
+	apu_cv_weak_symbols=yes \
 	APR_BUILD_DIR="$(STAGING_DIR)/usr/share/build-1"
+
+ifeq ($(CONFIG_USE_GLIBC)$(CONFIG_USE_MUSL),y)
+CONFIGURE_VARS += \
+	apu_cv_explicit_bzero=yes
+endif
 
 define Package/libaprutil/install/driver
 	$(INSTALL_DIR) $(1)/usr/lib/apr-util-1
@@ -126,31 +132,31 @@ endef
 $$(eval $$(call BuildPackage,libaprutil-$(subst _,-,$(1))))
 endef
 
+# PKG_CONFIG_DEPENDS trigger configure, but the compile afterward may be
+# incomplete if the build directory is not cleaned before. This is not a
+# general observation, yet it is valid for apr-util :/
+define Build/Compile
+	$(call Build/Compile/Default,clean all)
+endef
+
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/usr/bin $(1)/usr/include/apr-1/ $(1)/usr/lib  $(1)/usr/lib/pkgconfig/
-	$(CP)   $(PKG_INSTALL_DIR)/usr/bin/apu-1-config \
-	 	$(1)/usr/bin/
-	$(CP)   $(PKG_INSTALL_DIR)/usr/include/apr-1/* \
-		$(1)/usr/include/apr-1/
-ifneq ($(CONFIG_PACKAGE_libaprutil-crypto-openssl)$(CONFIG_PACKAGE_libaprutil-dbd-pgsql)$(CONFIG_PACKAGE_libaprutil-dbd-sqlite3)$(CONFIG_PACKAGE_libaprutil-ldap),)
-	$(INSTALL_DIR) $(1)/usr/lib/apr-util-1
-	$(CP)   $(PKG_INSTALL_DIR)/usr/lib/apr-util-1/apr_*{la,a,so*} \
-		$(1)/usr/lib/apr-util-1
-endif
-	$(CP)   $(PKG_INSTALL_DIR)/usr/lib/libaprutil-1.{la,a,so*} \
-		$(1)/usr/lib/
-	$(CP)   $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/apr-util-1.pc \
-		$(1)/usr/lib/pkgconfig/
-	$(SED) 's, -e \"s -I$$$$prefix/lib  g\",,g' $(1)/usr/bin/apu-1-config
-	$(SED) 's,^libdir=\"$$$${exec_prefix}/lib,libdir=\"$(STAGING_DIR)/usr/lib,g' $(1)/usr/bin/apu-1-config
-	$(SED) 's,^includedir=\"$$$${prefix}/include/,includedir=\"$(STAGING_DIR)/usr/include/,g' $(1)/usr/bin/apu-1-config
-	$(SED) 's,-L$$$$libdir,,g' $(1)/usr/bin/apu-1-config
-	$(SED) 's,-R$$$$libdir,,g' $(1)/usr/bin/apu-1-config
+	$(INSTALL_DIR) $(1)/usr/bin $(1)/usr/include/apr-1 \
+		$(1)/usr/lib/apr-util-1 $(1)/usr/lib/pkgconfig
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/apu-1-config $(1)/usr/bin
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/apr-1/* $(1)/usr/include/apr-1
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/apr-util-1/apr_*.{a,so} \
+			$(1)/usr/lib/apr-util-1 2>/dev/null || :
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libaprutil-1.{a,so*} \
+						$(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/apr-util-1.pc \
+					$(1)/usr/lib/pkgconfig
+	$(SED) '/^prefix=\|^exec_prefix=/s|/usr|$(STAGING_DIR)/usr|' \
+					$(1)/usr/bin/apu-1-config
 endef
 
 define Package/libaprutil/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libaprutil-1.so.* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libaprutil-1.so.* $(1)/usr/lib
 endef
 
 $(eval $(call BuildPackage,libaprutil))
