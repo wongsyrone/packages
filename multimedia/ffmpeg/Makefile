@@ -482,12 +482,10 @@ ifeq ($(ARCH),x86_64)
 	FFMPEG_CONFIGURE+= --enable-lto
 endif
 
-ifneq ($(CONFIG_TARGET_x86),)
-ifeq ($(CONFIG_NASM),y)
+ifeq ($(CONFIG_FFMPEG_X86ASM),y)
   FFMPEG_CONFIGURE += --enable-x86asm
 else
   FFMPEG_CONFIGURE += --disable-x86asm
-endif
 endif
 
 ifeq ($(BUILD_VARIANT),full)
