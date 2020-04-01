@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=minidlna
-PKG_RELEASE:=5
+PKG_RELEASE:=6
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.code.sf.net/p/minidlna/git
@@ -49,7 +49,7 @@ define Package/minidlna/conffiles
 /etc/config/minidlna
 endef
 
-CONFIGURE_ARGS +=\
+CONFIGURE_ARGS += \
 	--disable-rpath \
 	--with-libiconv-prefix="$(ICONV_PREFIX)" \
 	--with-libintl-prefix="$(INTL_PREFIX)" \
@@ -58,6 +58,8 @@ CONFIGURE_ARGS +=\
 	--with-os-url="https://openwrt.org/" \
 	--with-db-path="/var/run/minidlna" \
 	--with-log-path="/var/log"
+
+TARGET_CFLAGS += -DHAVE_CLOCK_GETTIME
 
 define Package/minidlna/install
 	$(INSTALL_DIR) $(1)/usr/sbin

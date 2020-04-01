@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=qemu
 PKG_VERSION:=4.2.0
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_HASH:=d3481d4108ce211a053ef15be69af1bdd9dde1510fda80d92be0f6c3e98768f0
 PKG_SOURCE_URL:=http://download.qemu.org/
@@ -258,6 +258,13 @@ config QEMU_UI_SPICE
 
 endif
 endef
+
+PKG_CONFIG_DEPENDS += \
+	CONFIG_QEMU_UI_VNC \
+	CONFIG_QEMU_UI_VNC_JPEG \
+	CONFIG_QEMU_UI_VNC_PNG \
+	CONFIG_QEMU_UI_VNC_SASL \
+	CONFIG_QEMU_UI_SPICE \
 
 
 # QEMU configure script does not recognize these options

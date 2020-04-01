@@ -374,7 +374,8 @@ $(call Package/libffmpeg/Default)
  DEPENDS+= +alsa-lib +PACKAGE_libopus:libopus \
     +SOFT_FLOAT:shine \
     +!SOFT_FLOAT:lame-lib \
-    +PACKAGE_libx264:libx264
+    +PACKAGE_libx264:libx264 \
+    +!PACKAGE_libx264:fdk-aac
  VARIANT:=full
 endef
 
