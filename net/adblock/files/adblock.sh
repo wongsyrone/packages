@@ -4,14 +4,14 @@
 # This is free software, licensed under the GNU General Public License v3.
 
 # set (s)hellcheck exceptions
-# shellcheck disable=1091 disable=2016 disable=2039 disable=2086 disable=2143 disable=2181 disable=2188
+# shellcheck disable=1091,2016,2039,2059,2086,2143,2181,2188
 
 # set initial defaults
 #
 export LC_ALL=C
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 set -o pipefail
-adb_ver="4.0.1"
+adb_ver="4.0.4"
 adb_enabled=0
 adb_debug=0
 adb_forcedns=0
@@ -39,9 +39,9 @@ adb_blacklist="/etc/adblock/adblock.blacklist"
 adb_whitelist="/etc/adblock/adblock.whitelist"
 adb_ubusservice="/etc/adblock/adblock.monitor"
 adb_mailservice="/etc/adblock/adblock.mail"
-adb_srcarc="/etc/adblock/adblock.sources.gz"
 adb_dnsfile="${adb_dnsprefix}.overall"
 adb_dnsjail="${adb_dnsprefix}.jail"
+adb_srcarc="/etc/adblock/adblock.sources.gz"
 adb_srcfile="${adb_tmpbase}/adb_sources.json"
 adb_rtfile="${adb_tmpbase}/adb_runtime.json"
 adb_loggercmd="$(command -v logger)"
@@ -310,7 +310,7 @@ f_dns()
 		if [ "${dns_up}" != "true" ]
 		then
 			f_dnsup 4
-			if [ "${rc}" -ne 0 ]
+			if [ "${?}" -ne 0 ]
 			then
 				f_log "err" "dns backend '${adb_dns}' not running or executable"
 			fi
@@ -371,7 +371,7 @@ f_fetch()
 	fi
 	case "${adb_fetchutil}" in
 		"aria2c")
-			adb_fetchparm="${adb_fetchparm:-"--timeout=20 --allow-overwrite=true --auto-file-renaming=false --check-certificate=true --dir=" " -o"}"
+			adb_fetchparm="${adb_fetchparm:-"--timeout=20 --allow-overwrite=true --auto-file-renaming=false --check-certificate=true --dir= -o"}"
 		;;
 		"curl")
 			adb_fetchparm="${adb_fetchparm:-"--connect-timeout 20 --silent --show-error --location -o"}"
@@ -555,37 +555,26 @@ f_count()
 #
 f_extconf()
 {
-	local config instance port fwcfg
+	local config config_dir config_file port fwcfg
 
 	case "${adb_dns}" in
 		"dnsmasq")
 			config="dhcp"
-			for instance in ${adb_dnsinstance}
-			do
-				if [ "${adb_enabled}" -eq 1 ] && [ -z "$(uci_get dhcp "@dnsmasq[${instance}]" confdir | grep -Fo "${adb_dnsdir}")" ]
-				then
-					uci_set dhcp "@dnsmasq[${instance}]" confdir "${adb_dnsdir}"
-				elif [ "${adb_enabled}" -eq 0 ] && [ -n "$(uci_get dhcp "@dnsmasq[${instance}]" confdir | grep -Fo "${adb_dnsdir}")" ]
-				then
-					uci_remove dhcp "@dnsmasq[${instance}]" confdir
-				fi
-			done
+			config_dir="$(uci_get dhcp "@dnsmasq[${adb_dnsinstance}]" confdir | grep -Fo "${adb_dnsdir}")"
+			if [ "${adb_enabled}" -eq 1 ] && [ -z "${config_dir}" ]
+			then
+				uci_set dhcp "@dnsmasq[${adb_dnsinstance}]" confdir "${adb_dnsdir}" 2>/dev/null
+			fi
 		;;
 		"kresd")
 			config="resolver"
-			if [ "${adb_enabled}" -eq 1 ] && [ -z "$(uci_get resolver kresd rpz_file | grep -Fo "${adb_dnsdir}/${adb_dnsfile}")" ]
+			config_file="$(uci_get resolver kresd rpz_file | grep -Fo "${adb_dnsdir}/${adb_dnsfile}")"
+			if [ "${adb_enabled}" -eq 1 ] && [ -z "${config_file}" ]
 			then
 				uci -q add_list resolver.kresd.rpz_file="${adb_dnsdir}/${adb_dnsfile}"
-			elif [ "${adb_enabled}" -eq 0 ] && [ -n "$(uci_get resolver kresd rpz_file | grep -Fo "${adb_dnsdir}/${adb_dnsfile}")" ]
+			elif [ "${adb_enabled}" -eq 0 ] && [ -n "${config_file}" ]
 			then
 				uci -q del_list resolver.kresd.rpz_file="${adb_dnsdir}/${adb_dnsfile}"
-			fi
-			if [ "${adb_enabled}" -eq 1 ] && [ "${adb_dnsflush}" -eq 0 ] && [ "$(uci_get resolver kresd keep_cache)" != "1" ]
-			then
-				uci_set resolver kresd keep_cache "1"
-			elif [ "${adb_enabled}" -eq 0 ] || { [ "${adb_dnsflush}" -eq 1 ] && [ "$(uci_get resolver kresd keep_cache)" = "1" ]; }
-			then
-				uci_set resolver kresd keep_cache "0"
 			fi
 		;;
 	esac
@@ -600,13 +589,15 @@ f_extconf()
 		do
 			if [ -z "$(printf "%s" "${fwcfg}" | grep -Fo -m1 "adblock_dns_${port}")" ]
 			then
-				uci_add firewall "redirect" "adblock_dns_${port}"
-				uci_set firewall "adblock_dns_${port}" "name" "Adblock DNS, port ${port}"
-				uci_set firewall "adblock_dns_${port}" "src" "lan"
-				uci_set firewall "adblock_dns_${port}" "proto" "tcp udp"
-				uci_set firewall "adblock_dns_${port}" "src_dport" "${port}"
-				uci_set firewall "adblock_dns_${port}" "dest_port" "${port}"
-				uci_set firewall "adblock_dns_${port}" "target" "DNAT"
+				uci -q batch <<-EOC
+					set firewall."adblock_dns_${port}"="redirect"
+					set firewall."adblock_dns_${port}".name="Adblock DNS, port ${port}"
+					set firewall."adblock_dns_${port}".src="lan"
+					set firewall."adblock_dns_${port}".proto="tcp udp"
+					set firewall."adblock_dns_${port}".src_dport="${port}"
+					set firewall."adblock_dns_${port}".dest_port="${port}"
+					set firewall."adblock_dns_${port}".target="DNAT"
+				EOC
 			fi
 		done
 	elif [ "${adb_enabled}" -eq 0 ] || [ "${adb_forcedns}" -eq 0 ]
@@ -635,7 +626,7 @@ f_dnsup()
 		"/etc/init.d/${adb_dns}" restart >/dev/null 2>&1
 		restart_rc="${?}"
 	fi
-	if [ "${restart_rc}" -eq 0 ]
+	if [ "${restart_rc}" = "0" ]
 	then
 		while [ "${cnt}" -le "${adb_dnstimeout}" ]
 		do
@@ -655,6 +646,7 @@ f_dnsup()
 					fi
 				else
 					sleep ${adb_dnstimeout}
+					cnt=${adb_dnstimeout}
 					out_rc=0
 					break
 				fi
@@ -698,7 +690,7 @@ f_list()
 					then
 						eval "${adb_dnsallow}" "${adb_tmpdir}/tmp.raw.${src_name}" > "${adb_tmpdir}/tmp.add.${src_name}"
 						out_rc="${?}"
-						if [ "${out_rc}" -eq 0 ] && [ "${adb_jail}" = "1" ] && [ "${adb_dnssstop}" != "0" ]
+						if [ "${out_rc}" -eq 0 ] && [ "${adb_jail}" = "1" ] && [ "${adb_dnsstop}" != "0" ]
 						then
 							> "${adb_jaildir}/${adb_dnsjail}"
 							if [ -n "${adb_dnsheader}" ]
@@ -1263,11 +1255,10 @@ f_main()
 				then
 					if [ -s "${adb_tmpdir}/tmp.rem.whitelist" ]
 					then
-						"${adb_awk}" "${src_rset}" "${src_tmpload}" | \
-						grep -Evf "${adb_tmpdir}/tmp.rem.whitelist" | \
-						"${adb_awk}" 'BEGIN{FS="."}{for(f=NF;f>1;f--)printf "%s.",$f;print $1}' > "${src_tmpsort}"
+						"${adb_awk}" "${src_rset}" "${src_tmpload}" | sed "s/\r//g" | \
+						grep -Evf "${adb_tmpdir}/tmp.rem.whitelist" | "${adb_awk}" 'BEGIN{FS="."}{for(f=NF;f>1;f--)printf "%s.",$f;print $1}' > "${src_tmpsort}"
 					else
-						"${adb_awk}" "${src_rset}" "${src_tmpload}" | \
+						"${adb_awk}" "${src_rset}" "${src_tmpload}" | sed "s/\r//g" | \
 						"${adb_awk}" 'BEGIN{FS="."}{for(f=NF;f>1;f--)printf "%s.",$f;print $1}' > "${src_tmpsort}"
 					fi
 					rm -f "${src_tmpload}"
@@ -1302,11 +1293,10 @@ f_main()
 				then
 					if [ -s "${adb_tmpdir}/tmp.rem.whitelist" ]
 					then
-						"${adb_awk}" "${src_rset}" "${src_tmpload}" | \
-						grep -Evf "${adb_tmpdir}/tmp.rem.whitelist" | \
-						"${adb_awk}" 'BEGIN{FS="."}{for(f=NF;f>1;f--)printf "%s.",$f;print $1}' > "${src_tmpsort}"
+						"${adb_awk}" "${src_rset}" "${src_tmpload}" | sed "s/\r//g" | \
+						grep -Evf "${adb_tmpdir}/tmp.rem.whitelist" | "${adb_awk}" 'BEGIN{FS="."}{for(f=NF;f>1;f--)printf "%s.",$f;print $1}' > "${src_tmpsort}"
 					else
-						"${adb_awk}" "${src_rset}" "${src_tmpload}" | \
+						"${adb_awk}" "${src_rset}" "${src_tmpload}" | sed "s/\r//g" | \
 						"${adb_awk}" 'BEGIN{FS="."}{for(f=NF;f>1;f--)printf "%s.",$f;print $1}' > "${src_tmpsort}"
 					fi
 					rm -f "${src_tmpload}"
@@ -1461,7 +1451,8 @@ f_report()
 			do
 				(
 					"${adb_dumpcmd}" -tttt -r "${file}" 2>/dev/null | \
-						"${adb_awk}" -v cnt="${cnt}" '!/\.lan\. |PTR\? | SOA\? /&&/ A[\? ]+|NXDomain|0\.0\.0\.0/{a=$1;b=substr($2,0,8);c=$4;sub(/\.[0-9]+$/,"",c);d=cnt $7;sub(/\*$/,"",d);e=$(NF-1);sub(/[0-9]\/[0-9]\/[0-9]|0\.0\.0\.0/,"NX",e);sub(/\.$/,"",e);sub(/([0-9]{1,3}\.){3}[0-9]{1,3}/,"OK",e);printf "%s\t%s\t%s\t%s\t%s\n",d,e,a,b,c}' >> "${adb_reportdir}/adb_report.raw"
+						"${adb_awk}" -v cnt="${cnt}" '!/\.lan\. |PTR\? | SOA\? /&&/ A[\? ]+|NXDomain|0\.0\.0\.0/{a=$1;b=substr($2,0,8);c=$4;sub(/\.[0-9]+$/,"",c);d=cnt $7;sub(/\*$/,"",d);
+						e=$(NF-1);sub(/[0-9]\/[0-9]\/[0-9]|0\.0\.0\.0/,"NX",e);sub(/\.$/,"",e);sub(/([0-9]{1,3}\.){3}[0-9]{1,3}/,"OK",e);printf "%s\t%s\t%s\t%s\t%s\n",d,e,a,b,c}' >> "${adb_reportdir}/adb_report.raw"
 				)&
 				hold=$((cnt%adb_maxqueue))
 				if [ "${hold}" -eq 0 ]
@@ -1473,8 +1464,10 @@ f_report()
 			wait
 			if [ -s "${adb_reportdir}/adb_report.raw" ]
 			then
-				sort ${adb_srtopts} -k 3 -k 4 -k 5 -k 1 -ur "${adb_reportdir}/adb_report.raw" | \
-					"${adb_awk}" '{currA=($1+0);currB=$1;currC=substr($1,length($1),1);if(reqA==currB){reqA=0;printf "%s\t%s\n",d,$2}else if(currC=="+"){reqA=currA;d=$3"\t"$4"\t"$5"\t"$2}}' > "${adb_reportdir}/adb_report.srt"
+				sort ${adb_srtopts} -k1 -k3 -k4 -k5 -k1 -ur "${adb_reportdir}/adb_report.raw" | \
+					"${adb_awk}" '{currA=($1+0);currB=$1;currC=substr($1,length($1),1);if(reqA==currB){reqA=0;printf "%s\t%s\n",d,$2}else if(currC=="+"){reqA=currA;d=$3"\t"$4"\t"$5"\t"$2}}' | \
+					sort ${adb_srtopts} -k1 -k2 -k3 -k4 -ur > "${adb_reportdir}/adb_report.srt"
+				rm -f "${adb_reportdir}/adb_report.raw"
 			fi
 
 			if [ -s "${adb_reportdir}/adb_report.srt" ]
@@ -1501,24 +1494,24 @@ f_report()
 					case "${top}" in
 						"top_clients")
 							"${adb_awk}" '{print $3}' "${adb_reportdir}/adb_report.srt" | sort ${adb_srtopts} | uniq -c | \
-								sort ${adb_srtopts} -nr | "${adb_awk}" '{ORS=" ";if(NR==1)printf "\{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2; else if(NR<10)printf ", \{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2}' >> "${adb_reportdir}/adb_report.json"
+								sort ${adb_srtopts} -nr | "${adb_awk}" '{ORS=" ";if(NR==1)printf "{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2; else if(NR<10)printf ", { \"count\": \"%s\", \"address\": \"%s\" }",$1,$2}' >> "${adb_reportdir}/adb_report.json"
 						;;
 						"top_domains")
 							"${adb_awk}" '{if($5!="NX")print $4}' "${adb_reportdir}/adb_report.srt" | sort ${adb_srtopts} | uniq -c | \
-								sort ${adb_srtopts} -nr | "${adb_awk}" '{ORS=" ";if(NR==1)printf "\{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2; else if(NR<10)printf ", \{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2}' >> "${adb_reportdir}/adb_report.json"
+								sort ${adb_srtopts} -nr | "${adb_awk}" '{ORS=" ";if(NR==1)printf "{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2; else if(NR<10)printf ", { \"count\": \"%s\", \"address\": \"%s\" }",$1,$2}' >> "${adb_reportdir}/adb_report.json"
 						;;
 						"top_blocked")
 							"${adb_awk}" '{if($5=="NX")print $4}' "${adb_reportdir}/adb_report.srt" | sort ${adb_srtopts} | uniq -c | \
-								sort ${adb_srtopts} -nr | "${adb_awk}" '{ORS=" ";if(NR==1)printf "\{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2; else if(NR<10)printf ", \{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2}' >> "${adb_reportdir}/adb_report.json"
+								sort ${adb_srtopts} -nr | "${adb_awk}" '{ORS=" ";if(NR==1)printf "{ \"count\": \"%s\", \"address\": \"%s\" }",$1,$2; else if(NR<10)printf ", { \"count\": \"%s\", \"address\": \"%s\" }",$1,$2}' >> "${adb_reportdir}/adb_report.json"
 						;;
 					esac
 					printf "%s" " ], " >> "${adb_reportdir}/adb_report.json"
 				done
 				search="${search//./\\.}"
 				search="${search//[+*~%\$&\"\' ]/}"
-				"${adb_awk}" "BEGIN{i=0;printf \"%s\",\"\\\"requests\\\": [ \" }/(${search})/{i++;if(i==1)printf \"\{ \\\"date\\\": \\\"%s\\\", \\\"time\\\": \\\"%s\\\", \\\"client\\\": \\\"%s\\\", \\\"domain\\\": \\\"%s\\\", \\\"rc\\\": \\\"%s\\\" }\",\$1,\$2,\$3,\$4,\$5;else if(i<=${count})printf \", { \\\"date\\\": \\\"%s\\\", \\\"time\\\": \\\"%s\\\", \\\"client\\\": \\\"%s\\\", \\\"domain\\\": \\\"%s\\\", \\\"rc\\\": \\\"%s\\\" }\",\$1,\$2,\$3,\$4,\$5}END{printf \"%s\" \" \] } }\n\"}" "${adb_reportdir}/adb_report.srt" >> "${adb_reportdir}/adb_report.json"
+				"${adb_awk}" "BEGIN{i=0;printf \"\\\"requests\\\": [ \" }/(${search})/{i++;if(i==1)printf \"{ \\\"date\\\": \\\"%s\\\", \\\"time\\\": \\\"%s\\\", \\\"client\\\": \\\"%s\\\", \\\"domain\\\": \\\"%s\\\", \\\"rc\\\": \\\"%s\\\" }\",\$1,\$2,\$3,\$4,\$5;else if(i<=${count})printf \", { \\\"date\\\": \\\"%s\\\", \\\"time\\\": \\\"%s\\\", \\\"client\\\": \\\"%s\\\", \\\"domain\\\": \\\"%s\\\", \\\"rc\\\": \\\"%s\\\" }\",\$1,\$2,\$3,\$4,\$5}END{printf \" ] } }\n\"}" "${adb_reportdir}/adb_report.srt" >> "${adb_reportdir}/adb_report.json"
+				rm -f "${adb_reportdir}/adb_report.srt"
 			fi
-			rm -f "${adb_reportdir}/adb_report.raw" "${adb_reportdir}/adb_report.srt"
 		fi
 
 		if [ -s "${adb_reportdir}/adb_report.json" ]

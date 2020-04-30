@@ -59,6 +59,8 @@ Package/vsftpd-tls/conffiles=$(Package/vsftpd/conffiles)
 
 ifneq ($(CONFIG_USE_MUSL),)
   NLSSTRING:=-lcrypt
+else ifneq ($(CONFIG_USE_GLIBC),)
+  NLSSTRING:=-lcrypt
 else
   NLSSTRING:=-lcrypt -lnsl
 endif

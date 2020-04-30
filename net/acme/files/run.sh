@@ -20,6 +20,7 @@ DEBUG=0
 NGINX_WEBSERVER=0
 UPDATE_NGINX=0
 UPDATE_UHTTPD=0
+USER_CLEANUP=
 
 . /lib/functions.sh
 
@@ -32,17 +33,17 @@ check_cron()
 
 log()
 {
-    logger -t acme -s -p daemon.info "$@"
+    logger -t acme -s -p daemon.info -- "$@"
 }
 
 err()
 {
-    logger -t acme -s -p daemon.err "$@"
+    logger -t acme -s -p daemon.err -- "$@"
 }
 
 debug()
 {
-    [ "$DEBUG" -eq "1" ] && logger -t acme -s -p daemon.debug "$@"
+    [ "$DEBUG" -eq "1" ] && logger -t acme -s -p daemon.debug -- "$@"
 }
 
 get_listeners() {
@@ -148,6 +149,11 @@ post_checks()
         NGINX_WEBSERVER=0
         /etc/init.d/nginx restart
     fi
+
+    if [ -n "$USER_CLEANUP" ] && [ -f "$USER_CLEANUP" ]; then
+        log "Running user-provided cleanup script from $USER_CLEANUP."
+        "$USER_CLEANUP" || return 1
+    fi
 }
 
 err_out()
@@ -183,12 +189,15 @@ issue_cert()
     local update_uhttpd
     local update_nginx
     local keylength
+    local keylength_ecc=0
     local domains
     local main_domain
     local moved_staging=0
     local failed_dir
     local webroot
     local dns
+    local user_setup
+    local user_cleanup
     local ret
     local domain_dir
 
@@ -200,9 +209,12 @@ issue_cert()
     config_get keylength "$section" keylength
     config_get webroot "$section" webroot
     config_get dns "$section" dns
+    config_get user_setup "$section" user_setup
+    config_get user_cleanup "$section" user_cleanup
 
     UPDATE_NGINX=$update_nginx
     UPDATE_UHTTPD=$update_uhttpd
+    USER_CLEANUP=$user_cleanup
 
     [ "$enabled" -eq "1" ] || return
 
@@ -211,10 +223,16 @@ issue_cert()
     set -- $domains
     main_domain=$1
 
-    [ -n "$webroot" ] || [ -n "$dns" ] || pre_checks "$main_domain" || return 1
+    if [ -n "$user_setup" ] && [ -f "$user_setup" ]; then
+        log "Running user-provided setup script from $user_setup."
+        "$user_setup" "$main_domain" || return 1
+    else
+        [ -n "$webroot" ] || [ -n "$dns" ] || pre_checks "$main_domain" || return 1
+    fi
 
     if echo $keylength | grep -q "^ec-"; then
         domain_dir="$STATE_DIR/${main_domain}_ecc"
+        keylength_ecc=1
     else
         domain_dir="$STATE_DIR/${main_domain}"
     fi
@@ -234,6 +252,7 @@ issue_cert()
             moved_staging=1
         else
             log "Found previous cert config. Issuing renew."
+            [ "$keylength_ecc" -eq "1" ] && acme_args="$acme_args --ecc"
             run_acme --home "$STATE_DIR" --renew -d "$main_domain" $acme_args && ret=0 || ret=1
             post_checks
             return $ret
