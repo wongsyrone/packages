@@ -17,7 +17,7 @@ include ./openvswitch.mk
 #
 PKG_NAME:=openvswitch
 PKG_VERSION:=$(ovs_version)
-PKG_RELEASE:=2
+PKG_RELEASE:=5
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://www.openvswitch.org/releases/
 PKG_HASH:=dd5f727427e36cab22bdeae61529d8c8fccacc53d968cfa7658f7f935ddda531
@@ -62,7 +62,7 @@ ifeq ($(if $(call ovs_kmod_is_intree,$(1)),$(ovs_kmod_intree_not_supported)),)
      PROVIDES:=$(call ovs_kmod_package_provides,$(1))
      KCONFIG:=$(ovs_kmod_$(1)_kconfig)
      FILES:=$(ovs_kmod_$(1)_files)
-     AUTOLOAD:=$(call AutoProbe,$(foreach m,$(ovs_kmod_$(1)_files),$(patsubst %.ko,%,$(basename $(m)))))
+     AUTOLOAD:=$(call AutoProbe,$(foreach m,$(ovs_kmod_$(1)_files),$(notdir $(patsubst %.ko,%,$(basename $(m))))))
   endef
 
   ovs_kmod_packages+=$(call ovs_kmod_package_name,$(1))
@@ -220,6 +220,7 @@ define ovs_common_install
 	$$(LN) /usr/share/openvswitch/scripts/ovs-ctl-wrapper $$(1)/usr/bin/ovs-kmod-ctl
 endef
 define Package/openvswitch-common/conffiles
+/etc/config/openvswitch
 /etc/openvswitch
 endef
 $(eval $(call OvsPackageTemplate,common))
@@ -256,7 +257,7 @@ CONFIGURE_VARS += \
 	ovs_cv_flake8=no \
 	ovs_cv_python3=$(PYTHON3) \
 	ovs_cv_python3_host=$(HOST_PYTHON3_BIN) \
-	ovs_cv_sphinx=no \
+	SPHINXBUILD=none \
 	KARCH=$(LINUX_KARCH) \
 
 ovs_intree_kmod_configs:=CONFIG_PACKAGE_kmod-openvswitch-intree
@@ -272,6 +273,8 @@ endif
 
 TARGET_CFLAGS += -flto -std=gnu99
 MAKE_VARS += PYTHONPATH="$(HOST_PYTHON3PATH)"
+
+export OVS_KERNEL_MAKE_FLAGS=$(KERNEL_MAKE_FLAGS)
 
 override CONFIG_AUTOREMOVE=
 
