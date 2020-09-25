@@ -8,11 +8,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=youtube-dl
-PKG_VERSION:=2020.9.6
+PKG_VERSION:=2020.9.20
 PKG_RELEASE:=1
 
 PYPI_NAME:=youtube_dl
-PKG_HASH:=eced5195e3264c36d2d62610bf235f75b592d5bb2f8ac424fd8da54ee426cd75
+PKG_HASH:=67fb9bfa30f5b8f06227c478a8a6ed04af1f97ad4e81dd7e2ce518df3e275391
 
 PKG_MAINTAINER:=Josef Schlehofer <pepe.schlehofer@gmail.com>
 PKG_LICENSE:=Unlicense
