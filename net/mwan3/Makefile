@@ -1,6 +1,5 @@
 #
 # Copyright (C) 2006-2014 OpenWrt.org
-# Copyright (C) 2015 wongsyrone
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
@@ -8,10 +7,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mwan3
-PKG_VERSION:=2.9.0
+PKG_VERSION:=2.10.1
 PKG_RELEASE:=1
 PKG_MAINTAINER:=Florian Eckert <fe@dev.tdt.de>
 PKG_LICENSE:=GPL-2.0
+PKG_CONFIG_DEPENDS:=CONFIG_IPV6
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -32,8 +32,8 @@ define Package/mwan3
 endef
 
 define Package/mwan3/description
-Hotplug script which makes configuration of multiple WAN interfaces simple \
-and manageable. With loadbalancing/failover support for up to 250 wan \
+Hotplug script which makes configuration of multiple WAN interfaces simple
+and manageable. With loadbalancing/failover support for up to 250 wan
 interfaces, connection tracking and an easy to manage traffic ruleset.
 endef
 
@@ -61,18 +61,13 @@ fi
 exit 0
 endef
 
+define Build/Compile
+	$(TARGET_CC) $(CFLAGS) $(LDFLAGS) $(FPIC) -shared -o $(PKG_BUILD_DIR)/libwrap_mwan3_sockopt.so.1.0 $(if $(CONFIG_IPV6),-DCONFIG_IPV6) $(PKG_BUILD_DIR)/sockopt_wrap.c -ldl
+endef
+
 define Package/mwan3/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) ./files/mwan3.sbin $(1)/usr/sbin/mwan3
-	$(INSTALL_BIN) ./files/mwan3track.sbin $(1)/usr/sbin/mwan3track
-	$(INSTALL_DIR) $(1)/lib/mwan3
-	$(INSTALL_DATA) ./files/mwan3.sh $(1)/lib/mwan3/mwan3.sh
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_DATA) ./files/mwan3.config $(1)/etc/config/mwan3
-	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface/
-	$(INSTALL_BIN) ./files/mwan3.hotplug $(1)/etc/hotplug.d/iface/15-mwan3
-	$(INSTALL_BIN) ./files/mwancustombak.hotplug $(1)/etc/hotplug.d/iface/16-mwancustombak
+	$(CP) ./files/* $(1)
+	$(CP) $(PKG_BUILD_DIR)/libwrap_mwan3_sockopt.so.1.0 $(1)/lib/mwan3/
 endef
 
 $(eval $(call BuildPackage,mwan3))
-
