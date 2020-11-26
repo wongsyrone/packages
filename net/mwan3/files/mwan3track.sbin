@@ -9,9 +9,6 @@ DEVICE=""
 
 IFDOWN_EVENT=0
 IFUP_EVENT=0
-TRACK_OUTPUT=$MWAN3TRACK_STATUS_DIR/$INTERFACE/TRACK_OUTPUT
-
-mwan3_init
 
 stop_subprocs() {
 	[ -n "$SLEEP_PID" ] && kill "$SLEEP_PID" && unset SLEEP_PID
@@ -43,19 +40,35 @@ if_up() {
 	stop_subprocs
 }
 
+ping_test_host() {
+	if [ "$FAMILY" = "ipv6" ]; then
+		echo "::1"
+	else
+		echo "127.0.0.1"
+	fi
+}
+
+get_ping_command() {
+	if [ -x "/usr/bin/ping" ] && /usr/bin/ping -${FAMILY#ipv} -c1 -q $(ping_test_host) &>/dev/null; then
+		# -4 option added in iputils c3e68ac6 so need to check if we can use it
+		# or if we must use ping and ping6
+		echo "/usr/bin/ping -${FAMILY#ipv}"
+	elif [ "$FAMILY" = "ipv6" ] && [ -x "/usr/bin/ping6" ]; then
+		echo "/usr/bin/ping6"
+	elif [ "$FAMILY" = "ipv4" ] && [ -x "/usr/bin/ping" ]; then
+		echo "/usr/bin/ping"
+	elif [ -x "/bin/ping" ]; then
+		echo "/bin/ping -${FAMILY#ipv}"
+	else
+		return 1
+	fi
+}
+
 validate_track_method() {
 	case "$1" in
 		ping)
-			if [ -x "/usr/bin/ping" ] && [ "$(/usr/bin/ping -V | grep -o '[0-9]*$')" -gt 20150519 ]; then
-				# -4 option added in iputils c3e68ac6
-				PING="/usr/bin/ping -${FAMILY#ipv}"
-			elif [ "$FAMILY" = "ipv6" ] && [ -x "/usr/bin/ping6" ]; then
-				PING="/usr/bin/ping6"
-			elif [ "$FAMILY" = "ipv4" ] && [ -x "/usr/bin/ping" ]; then
-				PING="/usr/bin/ping"
-			elif [ -x "/bin/ping" ]; then
-				PING="/bin/ping -${FAMILY#ipv}"
-			else
+			PING=$(get_ping_command)
+			if [ $? -ne 0 ]; then
 				LOG warn "Missing ping. Please enable BUSYBOX_DEFAULT_PING and recompile busybox or install iputils-ping package."
 				return 1
 			fi
@@ -169,6 +182,10 @@ main() {
 	INTERFACE=$1
 	STATUS=""
 	STARTED=0
+	TRACK_OUTPUT=$MWAN3TRACK_STATUS_DIR/$INTERFACE/TRACK_OUTPUT
+
+	mwan3_init
+
 	mkdir -p $MWAN3TRACK_STATUS_DIR/$INTERFACE
 
 	trap clean_up TERM
@@ -345,7 +362,7 @@ main() {
 		get_uptime > $MWAN3TRACK_STATUS_DIR/$INTERFACE/TIME
 
 		host_up_count=0
-		if [ "${IFDOWN_EVENT}" -ne 0 ] && [ "${IFUP_EVENT}" -ne 0 ]; then
+		if [ "${IFDOWN_EVENT}" -eq 0 ] && [ "${IFUP_EVENT}" -eq 0 ]; then
 			sleep "${sleep_time}" &
 			SLEEP_PID=$!
 			wait
