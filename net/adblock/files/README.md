@@ -12,9 +12,10 @@ A lot of people already use adblocker plugins within their desktop browsers, but
 | :------------------ | :-----: | :--- | :--------------- | :-------------------------------------------------------------------------------- |
 | adaway              | x       | S    | mobile           | [Link](https://github.com/AdAway/adaway.github.io)                                |
 | adguard             | x       | L    | general          | [Link](https://adguard.com)                                                       |
-| anti_ad             |         | L    | compilation      | [Link](https://github.com/privacy-protection-tools/anti-AD/blob/master/README.md) |
+| adguard_tracking    |         | S    | tracking         | [Link](https://github.com/AdguardTeam/cname-trackers)                             |
 | android_tracking    |         | S    | tracking         | [Link](https://github.com/Perflyst/PiHoleBlocklist)                               |
 | andryou             |         | L    | compilation      | [Link](https://gitlab.com/andryou/block/-/blob/master/readme.md)                  |
+| anti_ad             |         | L    | compilation      | [Link](https://github.com/privacy-protection-tools/anti-AD/blob/master/README.md) |
 | anudeep             |         | M    | compilation      | [Link](https://github.com/anudeepND/blacklist)                                    |
 | bitcoin             |         | S    | mining           | [Link](https://github.com/hoshsadiq/adblock-nocoin-list)                          |
 | disconnect          | x       | S    | general          | [Link](https://disconnect.me)                                                     |
@@ -61,6 +62,7 @@ A lot of people already use adblocker plugins within their desktop browsers, but
     • <b>S</b> (-10k), <b>M</b> (10k-30k) and <b>L</b> (30k-80k) should work for 128 MByte devices,  
     • <b>XL</b> (80k-200k) should work for 256-512 MByte devices,  
     • <b>XXL</b> (200k-) needs more RAM and Multicore support, e.g. x86 or raspberry devices.  
+    • <b>VAR</b> (50k-500k) variable size depending on the selection.  
 * Zero-conf like automatic installation & setup, usually no manual changes needed
 * Simple but yet powerful adblock engine: adblock does not use error prone external iptables rulesets, http pixel server instances and things like that
 * Supports five different DNS backend formats: dnsmasq, unbound, named (bind), kresd or raw (e.g. used by dnscrypt-proxy)
@@ -205,6 +207,9 @@ and at the end of the file add:
 **Change the DNS backend to 'kresd':**  
 Adblock deposits the final blocklist 'adb_list.overall' in '/etc/kresd', no further configuration needed.  
 <b>Please note:</b> The knot-resolver (kresd) is only available on Turris devices and does not support the SafeSearch functionality yet.
+
+**Use restrictive jail modes:**  
+You can enable a restrictive 'adb_list.jail' to block access to all domains except those listed in the whitelist file. Usually this list will be generated as an additional list for guest or kidsafe configurations (for a separate dns server instance). If the jail directory points to your primary dns directory, adblock enables the restrice jail mode (jail mode only).
 
 **Enable E-Mail notification via 'msmtp':**  
 To use the email notification you have to install & configure the package 'msmtp'.  

@@ -12,7 +12,7 @@
 export LC_ALL=C
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 set -o pipefail
-ban_ver="0.7.3"
+ban_ver="0.7.5"
 ban_enabled="0"
 ban_mail_enabled="0"
 ban_proto4_enabled="0"
@@ -44,7 +44,7 @@ ban_ipt6_savecmd="$(command -v ip6tables-save)"
 ban_ipt6_restorecmd="$(command -v ip6tables-restore)"
 ban_ipset_cmd="$(command -v ipset)"
 ban_logger_cmd="$(command -v logger)"
-ban_logread="$(command -v logread)"
+ban_logread_cmd="$(command -v logread)"
 ban_allsources=""
 ban_sources=""
 ban_asns=""
@@ -68,6 +68,7 @@ ban_srcfile="${ban_tmpbase}/ban_sources.json"
 ban_reportdir="${ban_tmpbase}/banIP-Report"
 ban_backupdir="${ban_tmpbase}/banIP-Backup"
 ban_srcarc="/etc/banip/banip.sources.gz"
+ban_dnsservice="/etc/banip/banip.dns"
 ban_mailservice="/etc/banip/banip.mail"
 ban_logservice="/etc/banip/banip.service"
 ban_maclist="/etc/banip/banip.maclist"
@@ -433,7 +434,7 @@ f_env()
 	then
 		json_load_file "${ban_srcfile}"
 		json_get_keys ban_allsources
-		ban_allsources="${ban_allsources} ${ban_localsources}"
+		ban_allsources="${ban_allsources} maclist blacklist whitelist"
 	else
 		f_log "err" "banIP source file not found"
 	fi
@@ -500,7 +501,7 @@ f_iptrule()
 {
 	local rc timeout="-w 5" action="${1}" chain="${2}" rule="${3}" pos="${4}"
 
-	if [ "${src_name}" = "maclist" ] || [ "${src_name##*_}" = "4" ]
+	if [ "${ban_proto4_enabled}" = "1" ] && { [ "${src_name}" = "maclist" ] || [ "${src_name##*_}" = "4" ]; }
 	then
 		rc="$("${ban_ipt4_cmd}" "${timeout}" -C ${chain} ${rule} 2>/dev/null; printf "%u" ${?})"
 		if { [ "${rc}" != "0" ] && { [ "${action}" = "-A" ] || [ "${action}" = "-I" ]; }; } || \
@@ -512,7 +513,7 @@ f_iptrule()
 			rc=0
 		fi
 	fi
-	if [ "${src_name}" = "maclist" ] || [ "${src_name##*_}" = "6" ]
+	if [ "${ban_proto6_enabled}" = "1" ] && { [ "${src_name}" = "maclist" ] || [ "${src_name##*_}" = "6" ]; }
 	then
 		rc="$("${ban_ipt6_cmd}" "${timeout}" -C ${chain} ${rule} 2>/dev/null; printf "%u" ${?})"
 		if { [ "${rc}" != "0" ] && { [ "${action}" = "-A" ] || [ "${action}" = "-I" ]; }; } || \
@@ -527,7 +528,7 @@ f_iptrule()
 	if [ -n "${rc}" ] && [ "${rc}" != "0" ]
 	then
 		> "${tmp_err}"
-		f_log "info" "iptables action '${action:-"-"}' failed with '${chain}, ${pos:-"-"}, ${rule:-"-"}'"
+		f_log "info" "${src_name}: iptables action '${action:-"-"}' failed with '${chain}, ${pos:-"-"}, ${rule:-"-"}'"
 	fi
 }
 
@@ -556,7 +557,7 @@ f_iptables()
 			fi
 		done
 	fi
-	if [ -z "${destroy}" ] && [ "${cnt}" -gt "0" ]
+	if [ -z "${destroy}" ] && { [ "${cnt}" -gt "0" ] || [ "${src_name%_*}" = "blacklist" ] || [ "${src_name%_*}" = "whitelist" ]; }
 	then
 		if [ "${src_settype}" != "dst" ]
 		then
@@ -643,7 +644,7 @@ f_iptables()
 #
 f_ipset()
 {
-	local src src_list action rule ipt_cmd out_rc cnt="0" cnt_ip="0" cnt_cidr="0" cnt_mac="0" timeout="-w 5" mode="${1}" in_rc="4"
+	local src src_list action rule ipt_cmd out_rc max="0" cnt="0" cnt_ip="0" cnt_cidr="0" cnt_mac="0" timeout="-w 5" mode="${1}" in_rc="4"
 
 	case "${mode}" in
 		"backup")
@@ -677,61 +678,65 @@ f_ipset()
 		"initial")
 			for proto in "4" "6"
 			do
-				if [ "${proto}" = "4" ]
+				if [ "${proto}" = "4" ] && [ "${ban_proto4_enabled}" = "1" ]
 				then
 					ipt_cmd="${ban_ipt4_cmd}"
 					chainsets="${ban_lan_inputchains_4} ${ban_lan_forwardchains_4} ${ban_wan_inputchains_4} ${ban_wan_forwardchains_4}"
-				elif [ "${proto}" = "6" ]
+				elif [ "${proto}" = "6" ] && [ "${ban_proto6_enabled}" = "1" ]
 				then
 					ipt_cmd="${ban_ipt6_cmd}"
 					chainsets="${ban_lan_inputchains_6} ${ban_lan_forwardchains_6} ${ban_wan_inputchains_6} ${ban_wan_forwardchains_6}"
 				fi
 
-				if [ -z "$("${ipt_cmd}" "${timeout}" -nL "${ban_chain}" 2>/dev/null)" ]
+				if { [ "${proto}" = "4" ] && [ "${ban_proto4_enabled}" = "1" ]; } || \
+					{ [ "${proto}" = "6" ] && [ "${ban_proto6_enabled}" = "1" ]; }
 				then
-					"${ipt_cmd}" "${timeout}" -N "${ban_chain}" 2>/dev/null
-					out_rc="${?}"
-					f_log "debug" "f_ipset ::: name: ${src_name:-"-"}, mode: ${mode:-"-"}, chain: ${ban_chain:-"-"}, out_rc: ${out_rc}"
-				else
-					out_rc=0
-					for chain in ${chainsets}
-					do
-						f_iptrule "-D" "${chain}" "-j ${ban_chain}"
-					done
-				fi
-
-				if [ "${ban_logsrc_enabled}" = "1" ] && [ "${out_rc}" = "0" ] && [ -z "$("${ipt_cmd}" "${timeout}" -nL "${ban_logchain_src}" 2>/dev/null)" ]
-				then
-					"${ipt_cmd}" "${timeout}" -N "${ban_logchain_src}" 2>/dev/null
-					out_rc="${?}"
-					if [ "${out_rc}" = "0" ]
+					if [ -z "$("${ipt_cmd}" "${timeout}" -nL "${ban_chain}" 2>/dev/null)" ]
 					then
-						"${ipt_cmd}" "${timeout}" -A "${ban_logchain_src}" -j LOG ${ban_logopts_src} --log-prefix "${ban_logprefix_src}"
+						"${ipt_cmd}" "${timeout}" -N "${ban_chain}" 2>/dev/null
+						out_rc="${?}"
+						f_log "debug" "f_ipset ::: name: ${src_name:-"-"}, mode: ${mode:-"-"}, chain: ${ban_chain:-"-"}, out_rc: ${out_rc}"
+					else
+						out_rc=0
+						for chain in ${chainsets}
+						do
+							f_iptrule "-D" "${chain}" "-j ${ban_chain}"
+						done
+					fi
+
+					if [ "${ban_logsrc_enabled}" = "1" ] && [ "${out_rc}" = "0" ] && [ -z "$("${ipt_cmd}" "${timeout}" -nL "${ban_logchain_src}" 2>/dev/null)" ]
+					then
+						"${ipt_cmd}" "${timeout}" -N "${ban_logchain_src}" 2>/dev/null
 						out_rc="${?}"
 						if [ "${out_rc}" = "0" ]
 						then
-							"${ipt_cmd}" "${timeout}" -A "${ban_logchain_src}" -j "${ban_logtarget_src}"
+							"${ipt_cmd}" "${timeout}" -A "${ban_logchain_src}" -j LOG ${ban_logopts_src} --log-prefix "${ban_logprefix_src}"
 							out_rc="${?}"
+							if [ "${out_rc}" = "0" ]
+							then
+								"${ipt_cmd}" "${timeout}" -A "${ban_logchain_src}" -j "${ban_logtarget_src}"
+								out_rc="${?}"
+							fi
 						fi
+						f_log "debug" "f_ipset ::: name: ${src_name:-"-"}, mode: ${mode:-"-"}, logchain_src: ${ban_logchain_src:-"-"}, out_rc: ${out_rc}"
 					fi
-					f_log "debug" "f_ipset ::: name: ${src_name:-"-"}, mode: ${mode:-"-"}, logchain_src: ${ban_logchain_src:-"-"}, out_rc: ${out_rc}"
-				fi
 
-				if [ "${ban_logdst_enabled}" = "1" ] && [ "${out_rc}" = "0" ] && [ -z "$("${ipt_cmd}" "${timeout}" -nL "${ban_logchain_dst}" 2>/dev/null)" ]
-				then
-					"${ipt_cmd}" "${timeout}" -N "${ban_logchain_dst}" 2>/dev/null
-					out_rc="${?}"
-					if [ "${out_rc}" = "0" ]
+					if [ "${ban_logdst_enabled}" = "1" ] && [ "${out_rc}" = "0" ] && [ -z "$("${ipt_cmd}" "${timeout}" -nL "${ban_logchain_dst}" 2>/dev/null)" ]
 					then
-						"${ipt_cmd}" "${timeout}" -A "${ban_logchain_dst}" -j LOG ${ban_logopts_dst} --log-prefix "${ban_logprefix_dst}"
+						"${ipt_cmd}" "${timeout}" -N "${ban_logchain_dst}" 2>/dev/null
 						out_rc="${?}"
 						if [ "${out_rc}" = "0" ]
 						then
-							"${ipt_cmd}" "${timeout}" -A "${ban_logchain_dst}" -j "${ban_logtarget_dst}"
+							"${ipt_cmd}" "${timeout}" -A "${ban_logchain_dst}" -j LOG ${ban_logopts_dst} --log-prefix "${ban_logprefix_dst}"
 							out_rc="${?}"
+							if [ "${out_rc}" = "0" ]
+							then
+								"${ipt_cmd}" "${timeout}" -A "${ban_logchain_dst}" -j "${ban_logtarget_dst}"
+								out_rc="${?}"
+							fi
 						fi
+						f_log "debug" "f_ipset ::: name: initial, mode: ${mode:-"-"}, logchain_dst: ${ban_logchain_dst:-"-"}, out_rc: ${out_rc}"
 					fi
-					f_log "debug" "f_ipset ::: name: initial, mode: ${mode:-"-"}, logchain_dst: ${ban_logchain_dst:-"-"}, out_rc: ${out_rc}"
 				fi
 			done
 			out_rc="${out_rc:-"${in_rc}"}"
@@ -739,27 +744,29 @@ f_ipset()
 			return "${out_rc}"
 		;;
 		"create")
-			if [ -s "${tmp_file}" ] && [ -z "$("${ban_ipset_cmd}" -q -n list "${src_name}")" ]
+			if [ -z "$("${ban_ipset_cmd}" -q -n list "${src_name}")" ] && \
+				{ [ -s "${tmp_file}" ] || [ "${src_name%_*}" = "whitelist" ] || [ "${src_name%_*}" = "blacklist" ]; }
 			then
-				cnt="$(awk 'END{print NR}' "${tmp_file}" 2>/dev/null)"
-				cnt=$((cnt+262144))
+				max="$(awk 'END{print NR}' "${tmp_file}" 2>/dev/null)"
+				max=$((max+262144))
 				if [ "${src_name}" = "maclist" ]
 				then
-					"${ban_ipset_cmd}" create "${src_name}" hash:mac hashsize 64 maxelem "${cnt}" counters timeout "${ban_maclist_timeout:-"0"}"
+					"${ban_ipset_cmd}" create "${src_name}" hash:mac hashsize 64 maxelem "${max}" counters timeout "${ban_maclist_timeout:-"0"}"
 					out_rc="${?}"
 				elif [ "${src_name%_*}" = "whitelist" ]
 				then
-					"${ban_ipset_cmd}" create "${src_name}" hash:net hashsize 64 maxelem "${cnt}" family "${src_ipver}" counters timeout "${ban_whitelist_timeout:-"0"}"
+					"${ban_ipset_cmd}" create "${src_name}" hash:net hashsize 64 maxelem "${max}" family "${src_ipver}" counters timeout "${ban_whitelist_timeout:-"0"}"
 					out_rc="${?}"
 				elif [ "${src_name%_*}" = "blacklist" ]
 				then
-					"${ban_ipset_cmd}" create "${src_name}" hash:net hashsize 64 maxelem "${cnt}" family "${src_ipver}" counters timeout "${ban_blacklist_timeout:-"0"}"
+					"${ban_ipset_cmd}" create "${src_name}" hash:net hashsize 64 maxelem "${max}" family "${src_ipver}" counters timeout "${ban_blacklist_timeout:-"0"}"
 					out_rc="${?}"
 				else
-					"${ban_ipset_cmd}" create "${src_name}" hash:net hashsize 64 maxelem "${cnt}" family "${src_ipver}" counters
+					"${ban_ipset_cmd}" create "${src_name}" hash:net hashsize 64 maxelem "${max}" family "${src_ipver}" counters
 					out_rc="${?}"
 				fi
-			else
+			elif [ -n "$("${ban_ipset_cmd}" -q -n list "${src_name}")" ]
+			then
 				"${ban_ipset_cmd}" -q flush "${src_name}"
 				out_rc="${?}"
 			fi
@@ -771,8 +778,8 @@ f_ipset()
 				then
 					src_list="$("${ban_ipset_cmd}" -q list "${src_name}")"
 					cnt="$(printf "%s\n" "${src_list}" | awk '/^Number of entries:/{print $4}')"
-					cnt_mac="$(printf "%s\n" "${src_list}" | grep -cE "^(([0-9A-Z][0-9A-Z]:){5}[0-9A-Z]{2} packets)")"
-					cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "(/[0-9]{1,3} packets)")"
+					cnt_mac="$(printf "%s\n" "${src_list}" | grep -cE "^(([0-9A-Z][0-9A-Z]:){5}[0-9A-Z]{2} )")"
+					cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "(/[0-9]{1,3} )")"
 					cnt_ip=$((cnt-cnt_cidr-cnt_mac))
 					printf "%s\n" "${cnt}" > "${tmp_cnt}"
 				fi
@@ -789,8 +796,8 @@ f_ipset()
 				out_rc=0
 				src_list="$("${ban_ipset_cmd}" -q list "${src_name}")"
 				cnt="$(printf "%s\n" "${src_list}" | awk '/^Number of entries:/{print $4}')"
-				cnt_mac="$(printf "%s\n" "${src_list}" | grep -cE "^(([0-9A-Z][0-9A-Z]:){5}[0-9A-Z]{2} packets)")"
-				cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "(/[0-9]{1,3} packets)")"
+				cnt_mac="$(printf "%s\n" "${src_list}" | grep -cE "^(([0-9A-Z][0-9A-Z]:){5}[0-9A-Z]{2} )")"
+				cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "(/[0-9]{1,3} )")"
 				cnt_ip=$((cnt-cnt_cidr-cnt_mac))
 				printf "%s\n" "${cnt}" > "${tmp_cnt}"
 				f_iptables
@@ -832,8 +839,8 @@ f_ipset()
 					rm -f "${ban_backupdir}/${src_name}.file"
 					src_list="$("${ban_ipset_cmd}" -q list "${src_name}")"
 					cnt="$(printf "%s\n" "${src_list}" | awk '/^Number of entries:/{print $4}')"
-					cnt_mac="$(printf "%s\n" "${src_list}" | grep -cE "^(([0-9A-Z][0-9A-Z]:){5}[0-9A-Z]{2} packets)")"
-					cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "(/[0-9]{1,3} packets)")"
+					cnt_mac="$(printf "%s\n" "${src_list}" | grep -cE "^(([0-9A-Z][0-9A-Z]:){5}[0-9A-Z]{2} )")"
+					cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "(/[0-9]{1,3} )")"
 					cnt_ip=$((cnt-cnt_cidr-cnt_mac))
 					printf "%s\n" "${cnt}" > "${tmp_cnt}"
 				fi
@@ -870,7 +877,7 @@ f_ipset()
 					"${ban_ipt6_cmd}" "${timeout}" -X "${chain}" 2>/dev/null
 				fi
 			done
-			for src in ${ban_sources} ${ban_localsources}
+			for src in ${ban_sources} maclist blacklist whitelist
 			do
 				if [ "${src}" = "maclist" ] && [ -n "$("${ban_ipset_cmd}" -q -n list "${src}")" ]
 				then
@@ -921,7 +928,7 @@ f_bgsrv()
 {
 	local bg_pid action="${1}"
 
-	bg_pid="$(pgrep -f "^/bin/sh ${ban_logservice}|${ban_logread}|^grep -qE Exit before auth|^grep -qE error: maximum|^grep -qE luci: failed|^grep -qE nginx" | awk '{ORS=" "; print $1}')"
+	bg_pid="$(pgrep -f "^/bin/sh ${ban_logservice}|${ban_logread_cmd}|^grep -qE Exit before auth|^grep -qE error: maximum|^grep -qE luci: failed|^grep -qE nginx" | awk '{ORS=" "; print $1}')"
 	if [ "${action}" = "start" ] && [ -x "${ban_logservice}" ] && [ "${ban_monitor_enabled}" = "1" ]
 	then
 		if [ -n "${bg_pid}" ]
@@ -999,11 +1006,26 @@ f_down()
 	#
 	case "${src_name%_*}" in
 		"blacklist"|"whitelist")
+			printf "%s\n" "0" > "${tmp_cnt}"
 			awk "${src_rule}" "${src_url}" > "${tmp_file}"
 			src_rc="${?}"
 			if [ "${src_rc}" = "0" ]
 			then
 				f_ipset "create"
+				if [ ! -f "${tmp_dns}" ] && { { [ "${proto}" = "4" ] && [ "${ban_proto4_enabled}" = "1" ]; } || \
+					{ [ "${proto}" = "6" ] && [ "${ban_proto6_enabled}" = "1" ] && [ "${ban_proto4_enabled}" = "0" ]; }; }
+				then
+					tmp_dns="${ban_tmpbase}/${src_name%_*}.dns"
+					src_rule="/^([[:alnum:]_-]{1,63}\\.)+[[:alpha:]]+([[:space:]]|$)/{print tolower(\$1)}"
+					awk "${src_rule}" "${src_url}" > "${tmp_dns}"
+					src_rc="${?}"
+					if [ "${src_rc}" = "0" ] && [ -s "${tmp_dns}" ]
+					then
+						( "${ban_dnsservice}" "${ban_ver}" "${ban_action}" "${src_name%_*}" "${tmp_dns}" & )
+					else
+						rm -f "${tmp_dns}"
+					fi
+				fi
 			else
 				f_log "debug" "f_down  ::: name: ${src_name}, url: ${src_url}, rule: ${src_rule}, rc: ${src_rc}"
 			fi
@@ -1160,7 +1182,7 @@ f_main()
 	#
 	if [ "${ban_autoblacklist}" = "1" ] || [ "${ban_monitor_enabled}" = "1" ]
 	then
-		log_raw="$(${ban_logread} -l "${ban_loglimit}")"
+		log_raw="$(${ban_logread_cmd} -l "${ban_loglimit}")"
 		if [ -n "$(printf "%s\n" "${ban_logterms}" | grep -F "dropbear")" ]
 		then
 			log_ips="$(printf "%s\n" "${log_raw}" | grep -E "Exit before auth from" | \
@@ -1276,6 +1298,11 @@ f_main()
 					f_down "${src_name}" "4" "inet" "${ban_whitelist}" "${src_rule_4}"
 				)&
 			fi
+		else
+			(
+				src_name="${src_name}_4"
+				f_ipset "flush"
+			)&
 		fi
 		if [ "${ban_proto6_enabled}" = "1" ]
 		then
@@ -1292,6 +1319,11 @@ f_main()
 					f_down "${src_name}" "6" "inet6" "${ban_whitelist}" "${src_rule_6}"
 				)&
 			fi
+		else
+			(
+				src_name="${src_name}_6"
+				f_ipset "flush"
+			)&
 		fi
 	done
 	wait
@@ -1368,7 +1400,7 @@ f_main()
 			if [ -z "$(printf "%s" "${ban_sources}" | grep -F "${src_name%_*}")" ]
 			then
 				ban_sources="${ban_sources} ${src_name%_*}"
-				ban_allsources="${ban_allsources/${src_name%_*}/}"
+				ban_allsources="${ban_allsources//${src_name%_*}/}"
 			fi
 		fi
 	done
@@ -1489,7 +1521,7 @@ f_report()
 				if [ -n "${src_list}" ]
 				then
 					cnt="$(printf "%s" "${src_list}" | awk '/^Number of entries:/{print $4}')"
-					cnt_acc="$(printf "%s" "${src_list}" | grep -cE " packets [1-9]+")"
+					cnt_acc="$(printf "%s" "${src_list}" | grep -cE "packets [1-9]+")"
 					cnt_acc_sum=$((cnt_acc_sum+cnt_acc))
 					cnt_mac_sum="${cnt}"
 					cnt_sum=$((cnt_sum+cnt))
@@ -1518,9 +1550,9 @@ f_report()
 					if [ -n "${src_list}" ]
 					then
 						cnt="$(printf "%s\n" "${src_list}" | awk '/^Number of entries:/{print $4}')"
-						cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "/[0-9]{1,3} packets [0-9]+")"
+						cnt_cidr="$(printf "%s\n" "${src_list}" | grep -cE "/[0-9]{1,3} ")"
 						cnt_ip=$((cnt-cnt_cidr-cnt_mac))
-						cnt_acc="$(printf "%s\n" "${src_list}" | grep -cE " packets [1-9]+")"
+						cnt_acc="$(printf "%s\n" "${src_list}" | grep -cE "packets [1-9]+")"
 						cnt_cidr_sum=$((cnt_cidr_sum+cnt_cidr))
 						cnt_ip_sum=$((cnt_ip_sum+cnt_ip))
 						cnt_acc_sum=$((cnt_acc_sum+cnt_acc))
