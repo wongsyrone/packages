@@ -11,7 +11,7 @@
 export LC_ALL=C
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 set -o pipefail
-adb_ver="4.1.1"
+adb_ver="4.1.3"
 adb_enabled=0
 adb_debug=0
 adb_forcedns=0
@@ -54,6 +54,7 @@ adb_repiface=""
 adb_replisten="53"
 adb_repchunkcnt="5"
 adb_repchunksize="1"
+adb_represolve="0"
 adb_lookupdomain="example.com"
 adb_action="${1:-"start"}"
 adb_packages=""
@@ -260,6 +261,21 @@ f_conf()
 	fi
 }
 
+# status helper function
+#
+f_char()
+{
+	local result input="${1}"
+
+	if [ "${input}" = "1" ]
+	then
+		result="✔"
+	else
+		result="✘"
+	fi
+	printf "%s" "${result}"
+}
+
 # load dns backend config
 #
 f_dns()
@@ -298,6 +314,7 @@ f_dns()
 	then
 		case "${adb_dns}" in
 			"dnsmasq")
+				adb_dnscachecmd="-"
 				adb_dnsinotify="${adb_dnsinotify:-"0"}"
 				adb_dnsinstance="${adb_dnsinstance:-"0"}"
 				adb_dnsuser="${adb_dnsuser:-"dnsmasq"}"
@@ -309,6 +326,7 @@ f_dns()
 				adb_dnsstop="${adb_dnsstop:-"address=/#/"}"
 			;;
 			"unbound")
+				adb_dnscachecmd="$(command -v unbound-control || printf "%s" "-")"
 				adb_dnsinotify="${adb_dnsinotify:-"0"}"
 				adb_dnsinstance="${adb_dnsinstance:-"0"}"
 				adb_dnsuser="${adb_dnsuser:-"unbound"}"
@@ -320,6 +338,7 @@ f_dns()
 				adb_dnsstop="${adb_dnsstop:-"local-zone: \".\" static"}"
 			;;
 			"named")
+				adb_dnscachecmd="$(command -v rndc || printf "%s" "-")"
 				adb_dnsinotify="${adb_dnsinotify:-"0"}"
 				adb_dnsinstance="${adb_dnsinstance:-"0"}"
 				adb_dnsuser="${adb_dnsuser:-"bind"}"
@@ -333,6 +352,7 @@ f_dns()
 				adb_dnsstop="${adb_dnsstop:-"* CNAME ."}"
 			;;
 			"kresd")
+				adb_dnscachecmd="-"
 				adb_dnsinotify="${adb_dnsinotify:-"0"}"
 				adb_dnsinstance="${adb_dnsinstance:-"0"}"
 				adb_dnsuser="${adb_dnsuser:-"root"}"
@@ -344,6 +364,7 @@ f_dns()
 				adb_dnsstop="${adb_dnsstop:-"* CNAME ."}"
 			;;
 			"raw")
+				adb_dnscachecmd="-"
 				adb_dnsinotify="${adb_dnsinotify:-"0"}"
 				adb_dnsinstance="${adb_dnsinstance:-"0"}"
 				adb_dnsuser="${adb_dnsuser:-"root"}"
@@ -439,7 +460,7 @@ f_dns()
 #
 f_fetch()
 {
-	local util utils cnt=0
+	local util utils insecure cnt=0
 
 	if [ -z "${adb_fetchutil}" ]
 	then
@@ -465,16 +486,32 @@ f_fetch()
 	fi
 	case "${adb_fetchutil}" in
 		"aria2c")
-			adb_fetchparm="${adb_fetchparm:-"--timeout=20 --allow-overwrite=true --auto-file-renaming=false --check-certificate=true --log-level=warn --dir=/ -o"}"
+			if [ "${adb_fetchinsecure}" = "1" ]
+			then
+				insecure="--check-certificate=false"
+			fi
+			adb_fetchparm="${adb_fetchparm:-"${insecure} --timeout=20 --allow-overwrite=true --auto-file-renaming=false --log-level=warn --dir=/ -o"}"
 		;;
 		"curl")
-			adb_fetchparm="${adb_fetchparm:-"--connect-timeout 20 --silent --show-error --location -o"}"
+			if [ "${adb_fetchinsecure}" = "1" ]
+			then
+				insecure="--insecure"
+			fi
+			adb_fetchparm="${adb_fetchparm:-"${insecure} --connect-timeout 20 --silent --show-error --location -o"}"
 		;;
 		"uclient-fetch")
-			adb_fetchparm="${adb_fetchparm:-"--timeout=20 -O"}"
+			if [ "${adb_fetchinsecure}" = "1" ]
+			then
+				insecure="--no-check-certificate"
+			fi
+			adb_fetchparm="${adb_fetchparm:-"${insecure} --timeout=20 -O"}"
 		;;
 		"wget")
-			adb_fetchparm="${adb_fetchparm:-"--no-cache --no-cookies --max-redirect=0 --timeout=20 -O"}"
+			if [ "${adb_fetchinsecure}" = "1" ]
+			then
+				insecure="--no-check-certificate"
+			fi
+			adb_fetchparm="${adb_fetchparm:-"${insecure} --no-cache --no-cookies --max-redirect=0 --timeout=20 -O"}"
 		;;
 	esac
 	if [ -n "${adb_fetchutil}" ] && [ -n "${adb_fetchparm}" ]
@@ -727,8 +764,40 @@ f_dnsup()
 	then
 		out_rc=0
 	else
-		"/etc/init.d/${adb_dns}" restart >/dev/null 2>&1
-		restart_rc="${?}"
+		if [ "${in_rc}" = "0" ] && [ "${adb_dnsflush}" = "0" ]
+		then
+			case "${adb_dns}" in
+				"unbound")
+					if [ -x "${adb_dnscachecmd}" ] && [ -d "${adb_tmpdir}" ] && [ -f "${adb_dnsdir}/unbound.conf" ]
+					then
+						"${adb_dnscachecmd}" -c "${adb_dnsdir}/unbound.conf" dump_cache > "${adb_tmpdir}/adb_cache.dump" 2>/dev/null
+					fi
+					"/etc/init.d/${adb_dns}" restart >/dev/null 2>&1
+					restart_rc="${?}"
+				;;
+				"named")
+					if [ -x "${adb_dnscachecmd}" ] && [ -f "/etc/bind/rndc.conf" ]
+					then
+						"${adb_dnscachecmd}" -c "/etc/bind/rndc.conf" reload >/dev/null 2>&1
+						restart_rc="${?}"
+					fi
+					if [ -z "${restart_rc}" ] || { [ -n "${restart_rc}" ] && [ "${restart_rc}" != "0" ]; }
+					then
+						"/etc/init.d/${adb_dns}" restart >/dev/null 2>&1
+						restart_rc="${?}"
+					fi
+				;;
+				*)
+					"/etc/init.d/${adb_dns}" restart >/dev/null 2>&1
+					restart_rc="${?}"
+				;;
+			esac
+		fi
+		if [ -z "${restart_rc}" ]
+		then
+			"/etc/init.d/${adb_dns}" restart >/dev/null 2>&1
+			restart_rc="${?}"
+		fi
 	fi
 	if [ "${restart_rc}" = "0" ]
 	then
@@ -758,8 +827,16 @@ f_dnsup()
 			cnt=$((cnt+1))
 			sleep 1
 		done
+		if [ "${out_rc}" = "0" ] && [ "${adb_dns}" = "unbound" ]
+		then
+			if [ -x "${adb_dnscachecmd}" ] && [ -d "${adb_tmpdir}" ] && [ -s "${adb_tmpdir}/adb_cache.dump" ]
+			then
+				"${adb_dnscachecmd}" -c "${adb_dnsdir}/unbound.conf" load_cache < "${adb_tmpdir}/adb_cache.dump" >/dev/null 2>&1
+				restart_rc="${?}"
+			fi
+		fi
 	fi
-	f_log "debug" "f_dnsup  ::: lookup_util: ${adb_lookupcmd:-"-"}, lookup_domain: ${adb_lookupdomain:-"-"}, restart_rc: ${restart_rc:-"-"}, dns_timeout: ${adb_dnstimeout}, dns_cnt: ${cnt}, in_rc: ${in_rc}, out_rc: ${out_rc}"
+	f_log "debug" "f_dnsup  ::: dns: ${adb_dns}, cache_cmd: ${adb_dnscachecmd:-"-"}, lookup_cmd: ${adb_lookupcmd:-"-"}, lookup_domain: ${adb_lookupdomain:-"-"}, restart_rc: ${restart_rc:-"-"}, dns_flush: ${adb_dnsflush}, dns_inotify: ${adb_dnsinotify}, dns_timeout: ${adb_dnstimeout}, dns_cnt: ${cnt}, in_rc: ${in_rc}, out_rc: ${out_rc}"
 	return "${out_rc}"
 }
 
@@ -1236,12 +1313,7 @@ f_jsnup()
 	json_load_file "${adb_rtfile}" >/dev/null 2>&1
 	if [ "${?}" = "0" ]
 	then
-		if [ -z "${adb_fetchutil}" ] || [ -z "${adb_awk}" ]
-		then
-			json_get_var utils "utilities"
-		else
-			utils="${adb_fetchutil}, ${adb_awk}"
-		fi
+		utils="download: $(readlink -fn "${adb_fetchutil}"), sort: $(readlink -fn "${adb_sort}"), awk: $(readlink -fn "${adb_awk}")"
 		if [ -z "${adb_cnt}" ]
 		then
 			json_get_var adb_cnt "blocked_domains"
@@ -1275,11 +1347,11 @@ f_jsnup()
 		json_close_object
 	done
 	json_close_array
-	json_add_string "dns_backend" "${adb_dns:-"-"}, ${adb_dnsdir:-"-"}"
+	json_add_string "dns_backend" "${adb_dns:-"-"} (${adb_dnscachecmd##*/}), ${adb_dnsdir:-"-"}"
 	json_add_string "run_utils" "${utils:-"-"}"
 	json_add_string "run_ifaces" "trigger: ${adb_trigger:-"-"}, report: ${adb_repiface:-"-"}"	
 	json_add_string "run_directories" "base: ${adb_tmpbase}, backup: ${adb_backupdir}, report: ${adb_reportdir}, jail: ${adb_jaildir}"
-	json_add_string "run_flags" "backup: ${adb_backup}, flush: ${adb_dnsflush}, force: ${adb_forcedns}, search: ${adb_safesearch}, report: ${adb_report}, mail: ${adb_mail}, jail: ${adb_jail}"
+	json_add_string "run_flags" "backup: $(f_char ${adb_backup}), flush: $(f_char ${adb_dnsflush}), force: $(f_char ${adb_forcedns}), search: $(f_char ${adb_safesearch}), report: $(f_char ${adb_report}), mail: $(f_char ${adb_mail}), jail: $(f_char ${adb_jail})"
 	json_add_string "last_run" "${runtime:-"-"}"
 	json_add_string "system" "${adb_sysver}"
 	json_dump > "${adb_rtfile}"
@@ -1582,7 +1654,7 @@ f_main()
 #
 f_report()
 {
-	local report_raw report_json report_txt content status total start end blocked percent top_list top array item index hold ports value key key_list cnt=0 action="${1}" count="${2:-"50"}" search="${3:-"+"}"
+	local report_raw report_json report_txt content status total start end blocked percent top_list top array item index hold ports value key key_list cnt=0 resolve="-nn" action="${1}" count="${2:-"50"}" search="${3:-"+"}"
 
 	report_raw="${adb_reportdir}/adb_report.raw"
 	report_srt="${adb_reportdir}/adb_report.srt"
@@ -1597,10 +1669,14 @@ f_report()
 		> "${report_srt}"
 		> "${report_txt}"
 		> "${report_jsn}"
+		if [ "${adb_represolve}" = "1" ]
+		then
+			resolve=""
+		fi
 		for file in "${adb_reportdir}/adb_report.pcap"*
 		do
 			(
-				"${adb_dumpcmd}" -nn -tttt -r "${file}" 2>/dev/null | \
+				"${adb_dumpcmd}" "${resolve}" -tttt -r "${file}" 2>/dev/null | \
 					"${adb_awk}" -v cnt="${cnt}" '!/\.lan\. |PTR\? | SOA\? /&&/ A[\? ]+|NXDomain|0\.0\.0\.0/{a=$1;b=substr($2,0,8);c=$4;sub(/\.[0-9]+$/,"",c);gsub(/[^[:alnum:]\.:-]/,"",c);d=cnt $7;sub(/\*$/,"",d);
 					e=$(NF-1);sub(/[0-9]\/[0-9]\/[0-9]|0\.0\.0\.0/,"NX",e);sub(/\.$/,"",e);sub(/([0-9]{1,3}\.){3}[0-9]{1,3}/,"OK",e);gsub(/[^[:alnum:]\.-]/,"",e);if(e==""){e="err"};printf "%s\t%s\t%s\t%s\t%s\n",d,e,a,b,c}' >> "${report_raw}"
 			)&
@@ -1739,7 +1815,7 @@ f_report()
 		( "${adb_mailservice}" "${adb_ver}" "${content}" >/dev/null 2>&1 )&
 		bg_pid="${!}"
 	fi
-	f_log "debug" "f_report ::: action: ${action}, count: ${count}, search: ${search}, dump_util: ${adb_dumpcmd}, rep_dir: ${adb_reportdir}, rep_iface: ${adb_repiface:-"-"}, rep_listen: ${adb_replisten}, rep_chunksize: ${adb_repchunksize}, rep_chunkcnt: ${adb_repchunkcnt}"
+	f_log "debug" "f_report ::: action: ${action}, count: ${count}, search: ${search}, dump_util: ${adb_dumpcmd}, rep_dir: ${adb_reportdir}, rep_iface: ${adb_repiface:-"-"}, rep_listen: ${adb_replisten}, rep_chunksize: ${adb_repchunksize}, rep_chunkcnt: ${adb_repchunkcnt}, rep_resolve: ${adb_represolve}"
 }
 
 # source required system libraries
@@ -1753,36 +1829,32 @@ else
 	f_log "err" "system libraries not found"
 fi
 
-# awk selection
-#
-adb_awk="$(command -v gawk)"
-if [ -z "${adb_awk}" ]
-then
-	adb_awk="$(command -v awk)"
-	if [ -z "${adb_awk}" ]
-	then
-		f_log "err" "awk not found"
-	fi
-fi
-
-# sort selection
-#
-adb_sort="$(command -v /usr/libexec/sort-coreutils)"
-if [ -z "${adb_sort}" ]
-then
-	adb_sort="$(command -v sort)"
-	if [ -z "$("${adb_sort}" --help 2>/dev/null | grep -Fo -m1 "coreutils")" ]
-	then
-		f_log "err" "coreutils sort not found"
-	fi
-fi
-
 # version information
 #
 if [ "${adb_action}" = "version" ]
 then
 	printf "%s\n" "${adb_ver}"
 	exit 0
+fi
+
+# awk check
+#
+adb_awk="$(command -v gawk)"
+if [ ! -x "${adb_awk}" ]
+then
+	adb_awk="$(command -v awk)"
+	if [ ! -x "${adb_awk}" ]
+	then
+		f_log "err" "awk not found or not executable"
+	fi
+fi
+
+# sort check
+#
+adb_sort="$(command -v sort)"
+if [ ! -x "${adb_sort}" ] || [ "$("${adb_sort}" --version 2>/dev/null | grep -c "coreutils")" = "0" ]
+then
+	f_log "err" "coreutils sort not found or not executable"
 fi
 
 # handle different adblock actions

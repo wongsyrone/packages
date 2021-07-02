@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=strongswan
 PKG_VERSION:=5.9.2
-PKG_RELEASE:=6
+PKG_RELEASE:=12
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://download.strongswan.org/ https://download2.strongswan.org/
@@ -248,7 +248,6 @@ $(call Package/strongswan/Default)
   TITLE+= (default)
   DEPENDS:= strongswan \
 	+strongswan-charon \
-	+strongswan-ipsec \
 	+strongswan-mod-aes \
 	+strongswan-mod-attr \
 	+strongswan-mod-connmark \
@@ -273,11 +272,11 @@ $(call Package/strongswan/Default)
 	+strongswan-mod-sha2 \
 	+strongswan-mod-socket-default \
 	+strongswan-mod-sshkey \
-	+strongswan-mod-stroke \
 	+strongswan-mod-updown \
 	+strongswan-mod-x509 \
 	+strongswan-mod-xauth-generic \
-	+strongswan-mod-xcbc
+	+strongswan-mod-xcbc \
+	+strongswan-swanctl
 endef
 
 define Package/strongswan-default/description
@@ -615,14 +614,7 @@ define Plugin/attr-sql/install
 endef
 
 define Plugin/stroke/install
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/aacerts
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/acerts
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/cacerts
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/certs
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/crls
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/ocspcerts
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/private
-	$(INSTALL_DIR) $(1)/etc/ipsec.d/reqs
+	$(INSTALL_DIR) $(1)/etc/ipsec.d/{aacerts,acerts,cacerts,certs,crls,ocspcerts,private,reqs}
 
 	$(INSTALL_DIR) $(1)/usr/lib/ipsec/plugins
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/ipsec/{starter,stroke} $(1)/usr/lib/ipsec/
