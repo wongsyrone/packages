@@ -9,12 +9,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=LVM2
-PKG_VERSION:=2.03.12
+PKG_VERSION:=2.03.13
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME).$(PKG_VERSION).tgz
 PKG_SOURCE_URL:=https://sourceware.org/pub/lvm2
-PKG_HASH:=76075cf2a2dd12ef526a583f0b3c72a6deaa10691fab28216b0821d01cff0cea
+PKG_HASH:=296b9c8769e6b5b8e81128a1c0aeb58e6da1f0fcf97dba90ad3f005ece53a568
 PKG_BUILD_DIR:=$(BUILD_DIR)/lvm2-$(BUILD_VARIANT)/$(PKG_NAME).$(PKG_VERSION)
 
 PKG_MAINTAINER:=Daniel Golle <daniel@makrotopia.org>
@@ -144,6 +144,8 @@ define Package/lvm2/install
 	$(INSTALL_DATA) ./files/lvm2.preinit $(1)/lib/preinit/80_lvm2
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/lvm2.init $(1)/etc/init.d/lvm2
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/block
+	$(INSTALL_DATA) ./files/lvm2.hotplug $(1)/etc/hotplug.d/block/20-lvm2
 	$(FIND) $(PKG_INSTALL_DIR)/usr/sbin/ -type l -exec $(CP) -a {} $(1)/sbin/ \;
 endef
 
