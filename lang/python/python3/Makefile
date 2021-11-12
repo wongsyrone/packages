@@ -16,7 +16,8 @@ PKG_VERSION:=$(PYTHON3_VERSION).$(PYTHON3_VERSION_MICRO)
 
 PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://www.python.org/ftp/python/$(PKG_VERSION)
-PKG_HASH:=397920af33efc5b97f2e0b57e91923512ef89fc5b3c1d21dbfc8c4828ce0108a
+# FIXME: if updating, get rid of [1] & [2] asap
+PKG_HASH:=f8145616e68c00041d1a6399b76387390388f8359581abc24432bb969b5e3c57
 
 PKG_MAINTAINER:=Alexandru Ardelean <ardeleanalex@gmail.com>, Jeffery To <jeffery.to@gmail.com>
 PKG_LICENSE:=Python/2.0
@@ -40,11 +41,10 @@ HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/Python-$(PKG_VERSION)
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_python3-pkg-resources \
-	CONFIG_PACKAGE_python3-setuptools CONFIG_PACKAGE_python3-pip \
-	CONFIG_PYTHON3_BLUETOOTH_SUPPORT
+	CONFIG_PACKAGE_python3-setuptools CONFIG_PACKAGE_python3-pip
 
-PKG_BUILD_DEPENDS:=python3/host
-HOST_BUILD_DEPENDS:=bzip2/host expat/host libffi/host
+PKG_BUILD_DEPENDS:=bluez python3/host
+HOST_BUILD_DEPENDS:=bzip2/host libffi/host
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/package.mk
@@ -91,7 +91,7 @@ endef
 define Package/python3-light
 $(call Package/python3/Default)
   TITLE:=Python $(PYTHON3_VERSION) light installation
-  DEPENDS:=+python3-base +libffi +libbz2 +PYTHON3_BLUETOOTH_SUPPORT:bluez-libs +libuuid
+  DEPENDS:=+python3-base +libffi +libbz2 +libuuid
 endef
 
 define Package/python3-light/config
@@ -148,10 +148,6 @@ EXTRA_LDFLAGS+= \
 	-L$(PKG_BUILD_DIR) \
 	-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib
 
-DISABLE_BLUETOOTH:= \
-	ac_cv_header_bluetooth_bluetooth_h=no \
-	ac_cv_header_bluetooth_h=no
-
 CONFIGURE_ARGS+= \
 	--enable-optimizations \
 	--enable-shared \
@@ -162,8 +158,7 @@ CONFIGURE_ARGS+= \
 	$(if $(CONFIG_IPV6),--enable-ipv6) \
 	$(if $(findstring mips,$(CONFIG_ARCH)),,--with-lto) \
 	CONFIG_SITE="$(PKG_BUILD_DIR)/config.site" \
-	OPT="$(TARGET_CFLAGS)" \
-	$(if $(CONFIG_PYTHON3_BLUETOOTH_SUPPORT),,$(DISABLE_BLUETOOTH))
+	OPT="$(TARGET_CFLAGS)"
 
 define Build/Prepare
 	$(call Build/Prepare/Default)
@@ -206,6 +201,14 @@ define Build/Compile/python3-pip
 		--root=$(PKG_BUILD_DIR)/install-pip \
 		--prefix=/usr \
 		$(PKG_BUILD_DIR)/Lib/ensurepip/_bundled/pip-$(PYTHON3_PIP_VERSION)-py3-none-any.whl
+	# FIXME: [1] get rid of this asap; 'patch' doesn't like Windows endings, and this file is full of them...
+	#        I actually tried this in a number of ways and the only way to fix this is to implement
+	#        a poor-man's dos2unix using sed.
+	#        The issue is with the pip package; it seems that it throws in some Windows line-endings
+	#        and 'patch' won't handle them. So, we do a "dos2unix" and then patch.
+	#        We can get rid of this once this is solved upstream and in pip:
+	#            https://github.com/pypa/pep517/pull/130
+	sed 's/\r//' -i $(PKG_BUILD_DIR)/install-pip/usr/lib/python$(PYTHON3_VERSION)/site-packages/pip/_vendor/pep517/in_process/__init__.py
 	$(call PatchDir,$(PKG_BUILD_DIR)/install-pip/usr/lib/python$(PYTHON3_VERSION)/site-packages,./patches-pip,)
 endef
 else
@@ -364,6 +367,8 @@ define Host/Install
 		touch $(HOST_PYTHON3_PKG_DIR)/.setuptools_installed_$(PYTHON3_SETUPTOOLS_VERSION)-$(PYTHON3_SETUPTOOLS_PKG_RELEASE)
 	)
 	$(if $(wildcard $(HOST_PYTHON3_PKG_DIR)/.pip_installed_$(PYTHON3_PIP_VERSION)-$(PYTHON3_PIP_PKG_RELEASE)),,
+		# FIXME: [2] get rid of this asap; same as [1]
+		sed 's/\r//' -i $(HOST_PYTHON3_PKG_DIR)/pip/_vendor/pep517/in_process/__init__.py
 		$(call HostPatchDir,$(HOST_PYTHON3_PKG_DIR),./patches-pip,)
 		touch $(HOST_PYTHON3_PKG_DIR)/.pip_installed_$(PYTHON3_PIP_VERSION)-$(PYTHON3_PIP_PKG_RELEASE)
 	)
