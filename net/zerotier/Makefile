@@ -59,6 +59,9 @@ endef
 TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
 
+# wongsyrone: enable port mapper trace for debugging
+TARGET_CFLAGS += -DZT_PORTMAPPER_TRACE=1
+
 define Package/zerotier/conffiles
 /etc/config/zerotier
 /etc/zerotier
