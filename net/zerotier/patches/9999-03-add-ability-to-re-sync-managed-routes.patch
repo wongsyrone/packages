@@ -1,0 +1,77 @@
+--- a/one.cpp
++++ b/one.cpp
+@@ -145,6 +145,8 @@ static void cliPrintHelp(const char *pn,
+ 	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
+ 	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
+ 	fprintf(out,"  dump                    - Debug settings dump for support" ZT_EOL_S);
++	fprintf(out,"  resyncnetwork <network ID>  - Re-apply network settings (OpenWrt)" ZT_EOL_S);
++	fprintf(out,"       NOTE: this command does NOT re-read <network ID>.local.conf" ZT_EOL_S);
+ 	fprintf(out,ZT_EOL_S"Available settings:" ZT_EOL_S);
+ 	fprintf(out,"  Settings to use with [get/set] may include property names from " ZT_EOL_S);
+ 	fprintf(out,"  the JSON output of \"zerotier-cli -j listnetworks\". Additionally, " ZT_EOL_S);
+@@ -861,6 +863,34 @@ static int cli(int argc,char **argv)
+ 			}
+ 			return 0;
+ 		} else {
++			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
++			return 1;
++		}
++	} else if (command == "resyncnetwork") {
++		if (arg1.length() != 16) {
++			printf("invalid network id" ZT_EOL_S);
++			return 2;
++		}
++		requestHeaders["Content-Type"] = "application/json";
++		requestHeaders["Content-Length"] = "2";
++		unsigned int scode = Http::POST(
++			1024 * 1024 * 16,
++			60000,
++			(const struct sockaddr *)&addr,
++			(std::string("/resyncnetwork/") + arg1).c_str(),
++			requestHeaders,
++			"{}",
++			2,
++			responseHeaders,
++			responseBody);
++		if (scode == 200) {
++			if (json) {
++				printf("%s",cliFixJsonCRs(responseBody).c_str());
++			} else {
++				printf("200 resyncnetwork OK" ZT_EOL_S);
++			}
++			return 0;
++		} else {
+ 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+ 			return 1;
+ 		}
+--- a/service/OneService.cpp
++++ b/service/OneService.cpp
+@@ -1625,6 +1625,28 @@ public:
+ 						} else scode = 500;
+ 
+ 					} else scode = 404;
++				} else if (ps[0] == "resyncnetwork") {
++					if (ps.size() == 2) {
++
++						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
++						_node->join(wantnw,(void *)0,(void *)0); // does nothing if we are a member
++						ZT_VirtualNetworkList *nws = _node->networks();
++						if (nws) {
++							for(unsigned long i=0;i<nws->networkCount;++i) {
++								if (nws->networks[i].nwid == wantnw) {
++									OneService::NetworkSettings localSettings;
++									getNetworkSettings(nws->networks[i].nwid,localSettings);
++									setNetworkSettings(nws->networks[i].nwid,localSettings); // core logic
++									_networkToJson(res,&(nws->networks[i]),portDeviceName(nws->networks[i].nwid),localSettings);
++
++									scode = 200;
++									break;
++								}
++							}
++							_node->freeQueryResult((void *)nws);
++						} else scode = 500;
++
++					} else scode = 404;
+ 				} else {
+ 					if (_controller)
+ 						scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
