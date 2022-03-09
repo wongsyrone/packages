@@ -6,13 +6,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zerotier
-PKG_VERSION:=1.8.4
-PKG_RELEASE:=$(AUTORELEASE)
+PKG_VERSION:=1.8.5
+PKG_RELEASE:=bc2c4cf8
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_VERSION)?
-PKG_HASH:=61b8c1ea5904cc87431939212033bb4d05d11f517860a01cac75f0090d94272b
-PKG_BUILD_DIR:=$(BUILD_DIR)/ZeroTierOne-$(PKG_VERSION)
+#PKG_SOURCE_PROTO:=git
+# dev branch is the latest
+#PKG_SOURCE_URL:=https://github.com/zerotier/ZeroTierOne.git
+#PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=bc2c4cf80aceeb4bc86d570de1fe17f93f678ca4
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
+
+PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_SOURCE_VERSION)?
+PKG_HASH:=eae36b151bca0b0dbb441dd7fc68023fc5d202fd8214e8f20e417fe24a422002
+PKG_BUILD_DIR:=$(BUILD_DIR)/ZeroTierOne-$(PKG_SOURCE_VERSION)
 
 PKG_MAINTAINER:=Moritz Warning <moritzwarning@web.de>
 PKG_LICENSE:=BSL 1.1
@@ -58,9 +64,6 @@ endef
 # Make binary smaller
 TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
-
-# wongsyrone: enable port mapper trace for debugging
-TARGET_CFLAGS += -DZT_PORTMAPPER_TRACE=1
 
 define Package/zerotier/conffiles
 /etc/config/zerotier

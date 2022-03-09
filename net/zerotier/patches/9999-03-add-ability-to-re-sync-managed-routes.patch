@@ -46,29 +46,29 @@
  		}
 --- a/service/OneService.cpp
 +++ b/service/OneService.cpp
-@@ -1625,6 +1625,28 @@ public:
+@@ -1879,6 +1879,28 @@ div.icon {\
  						} else scode = 500;
  
  					} else scode = 404;
 +				} else if (ps[0] == "resyncnetwork") {
++					// copy from 'network' above
 +					if (ps.size() == 2) {
 +
 +						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
 +						_node->join(wantnw,(void *)0,(void *)0); // does nothing if we are a member
-+						ZT_VirtualNetworkList *nws = _node->networks();
-+						if (nws) {
-+							for(unsigned long i=0;i<nws->networkCount;++i) {
-+								if (nws->networks[i].nwid == wantnw) {
-+									OneService::NetworkSettings localSettings;
-+									getNetworkSettings(nws->networks[i].nwid,localSettings);
-+									setNetworkSettings(nws->networks[i].nwid,localSettings); // core logic
-+									_networkToJson(res,&(nws->networks[i]),portDeviceName(nws->networks[i].nwid),localSettings);
-+
-+									scode = 200;
-+									break;
++						Mutex::Lock l(_nets_m);
++						if (!_nets.empty()) {
++							if (_nets.find(wantnw) != _nets.end()) {
++								NetworkState& ns = _nets[wantnw];
++								setNetworkSettings(wantnw, ns.settings());
++								if (ns.tap()) {
++									syncManagedStuff(ns,true,true,true);
 +								}
++
++								_networkToJson(res, ns);
++
++								scode = 200;
 +							}
-+							_node->freeQueryResult((void *)nws);
 +						} else scode = 500;
 +
 +					} else scode = 404;

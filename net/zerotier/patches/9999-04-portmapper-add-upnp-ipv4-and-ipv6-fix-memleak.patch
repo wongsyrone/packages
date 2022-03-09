@@ -1,0 +1,71 @@
+--- a/osdep/PortMapper.cpp
++++ b/osdep/PortMapper.cpp
+@@ -46,9 +46,11 @@
+ #ifdef ZT_USE_SYSTEM_MINIUPNPC
+ #include <miniupnpc/miniupnpc.h>
+ #include <miniupnpc/upnpcommands.h>
++#include <miniupnpc/upnperrors.h>
+ #else
+ #include "../ext/miniupnpc/miniupnpc.h"
+ #include "../ext/miniupnpc/upnpcommands.h"
++#include "../ext/miniupnpc/upnperrors.h"
+ #endif
+ 
+ #ifdef ZT_USE_SYSTEM_NATPMP
+@@ -187,8 +189,36 @@ public:
+ 				struct UPNPUrls urls;
+ 				struct IGDdatas data;
+ 
++				int getValidIGD_ret = 0;
+ 				int upnpError = 0;
+-				UPNPDev *devlist = upnpDiscoverAll(5000,(const char *)0,(const char *)0,0,0,2,&upnpError);
++				UPNPDev* devlist = nullptr;
++				UPNPDev* tmplist = nullptr;
++				for (int ipv6 = 0; ipv6 <= 1; ++ipv6) {
++					tmplist = upnpDiscoverAll(5000, (const char*)nullptr, (const char*)nullptr, UPNP_LOCAL_PORT_ANY, ipv6, 2, &upnpError);
++					if (upnpError != UPNPDISCOVER_SUCCESS || tmplist == nullptr) {
++#ifdef ZT_PORTMAPPER_TRACE
++						PM_TRACE("PortMapper: UPnP: upnpDiscoverAll(%s): %s or tmplist is empty" ZT_EOL_S, ipv6 == 1 ? "IPv6" : "IPv4", strupnperror(upnpError));
++#endif
++					}
++					else {
++						// found list, concat them
++						if (devlist == nullptr) {
++#ifdef ZT_PORTMAPPER_TRACE
++							PM_TRACE("PortMapper: UPnP: upnpDiscoverAll(%s) empty devlist" ZT_EOL_S, ipv6 == 1 ? "IPv6" : "IPv4");
++#endif
++							devlist = tmplist;
++						}
++						else {
++#ifdef ZT_PORTMAPPER_TRACE
++							PM_TRACE("PortMapper: UPnP: upnpDiscoverAll(%s) concat devlist" ZT_EOL_S, ipv6 == 1 ? "IPv6" : "IPv4");
++#endif
++							UPNPDev* tmp = nullptr;
++							for (tmp = devlist; tmp->pNext != nullptr; tmp = tmp->pNext)
++								;
++							tmp->pNext = tmplist;
++						}
++					}
++				}
+ 				if (devlist) {
+ 
+ #ifdef ZT_PORTMAPPER_TRACE
+@@ -207,7 +237,7 @@ public:
+ 					memset(&data,0,sizeof(data));
+ 					OSUtils::ztsnprintf(inport,sizeof(inport),"%d",localPort);
+ 
+-					if ((UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
++					if ((getValidIGD_ret = UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
+ #ifdef ZT_PORTMAPPER_TRACE
+                         PM_TRACE("PortMapper: UPnP: my LAN IP address: %s" ZT_EOL_S,lanaddr);
+ #endif
+@@ -284,6 +314,9 @@ public:
+ 					}
+ 
+ 					freeUPNPDevlist(devlist);
++					if (getValidIGD_ret != 0) {
++						FreeUPNPUrls(&urls);
++					}
+ 
+ 				} else {
+ 					mode = 0;
