@@ -12,7 +12,7 @@ uvol_uci_add() {
 	local devname="$2"
 	local mode="$3"
 	local autofs=0
-	local target="/var/run/uvol/$volname"
+	local target="/tmp/run/uvol/$volname"
 	local uuid uciname
 
 	[ "$mode" = "ro" ] && autofs=1
@@ -23,8 +23,8 @@ uvol_uci_add() {
 	uuid="${uuid:5}"
 
 	case "$uciname" in
-		"_uxc")
-			target="/var/run/uxc"
+		"_meta")
+			target="/tmp/run/uvol/.meta"
 			;;
 		"_"*)
 			return 1
@@ -50,7 +50,7 @@ uvol_uci_remove() {
 	local volname="$1"
 	local uciname
 
-	uciname="${volname//-/_}"
+	uciname="${volname//[-.]/_}"
 	uciname="${uciname//[!([:alnum:]_)]}"
 	if [ -e "${UCI_SPOOLDIR}/add-$1" ]; then
 		rm "${UCI_SPOOLDIR}/add-$1"

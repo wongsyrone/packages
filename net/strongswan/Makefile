@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=strongswan
-PKG_VERSION:=5.9.4
+PKG_VERSION:=5.9.5
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://download.strongswan.org/ https://download2.strongswan.org/
-PKG_HASH:=45fdf1a4c2af086d8ff5b76fd7b21d3b6f0890f365f83bf4c9a75dda26887518
+PKG_HASH:=983e4ef4a4c6c9d69f5fe6707c7fe0b2b9a9291943bbf4e008faab6bf91c0bdd
 PKG_LICENSE:=GPL-2.0-or-later
 PKG_MAINTAINER:=Philip Prindeville <philipp@redfish-solutions.com>, Noel Kuntze <noel.kuntze@thermi.consulting>
 PKG_CPE_ID:=cpe:/a:strongswan:strongswan
@@ -673,7 +673,7 @@ $(eval $(call BuildPlugin,blowfish,Blowfish crypto,))
 $(eval $(call BuildPlugin,ccm,CCM AEAD wrapper crypto,))
 $(eval $(call BuildPlugin,chapoly,ChaCha20-Poly1305 AEAD crypto,))
 $(eval $(call BuildPlugin,cmac,CMAC crypto,))
-$(eval $(call BuildPlugin,connmark,netfilter connection marking,))
+$(eval $(call BuildPlugin,connmark,netfilter connection marking,+iptables-legacy))
 $(eval $(call BuildPlugin,constraints,advanced X509 constraint checking,))
 $(eval $(call BuildPlugin,coupling,IKEv2 plugin to couple peer certificates permanently to authentication,))
 $(eval $(call BuildPlugin,ctr,Counter Mode wrapper crypto,))
@@ -690,7 +690,7 @@ $(eval $(call BuildPlugin,eap-radius,EAP RADIUS auth,))
 $(eval $(call BuildPlugin,eap-tls,EAP TLS auth,+strongswan-libtls))
 $(eval $(call BuildPlugin,farp,fake arp respsonses,))
 $(eval $(call BuildPlugin,fips-prf,FIPS PRF crypto,+strongswan-mod-sha1))
-$(eval $(call BuildPlugin,forecast,forward multi/broadcast traffic,+kmod-ipt-conntrack-extra))
+$(eval $(call BuildPlugin,forecast,forward multi/broadcast traffic,+iptables-legacy +kmod-ipt-conntrack-extra))
 $(eval $(call BuildPlugin,gcm,GCM AEAD wrapper crypto,))
 $(eval $(call BuildPlugin,gcrypt,libgcrypt,+PACKAGE_strongswan-mod-gcrypt:libgcrypt))
 $(eval $(call BuildPlugin,gmp,libgmp,+PACKAGE_strongswan-mod-gmp:libgmp))

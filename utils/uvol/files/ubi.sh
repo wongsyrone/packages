@@ -168,12 +168,12 @@ disactivatevol() {
 	vol_is_mode "$voldev" wo && return 22
 	vol_is_mode "$voldev" wp && return 16
 	if vol_is_mode "$voldev" ro; then
-		/sbin/block umount "ubiblock${voldev:3}"
+		grep -q "^/dev/ubiblock${voldev:3}" /proc/self/mounts && umount "/dev/ubiblock${voldev:3}"
 		ubiblock --remove "/dev/$voldev"
 		ubirename "/dev/$ubidev" "uvol-ro-$1" "uvol-rd-$1" || return $?
 		return 0
 	elif vol_is_mode "$voldev" rw; then
-		/sbin/block umount "$voldev"
+		umount "/dev/$voldev"
 		ubirename "/dev/$ubidev" "uvol-rw-$1" "uvol-wd-$1" || return $?
 		block_hotplug remove "$voldev"
 		return 0
@@ -212,6 +212,7 @@ listvols() {
 		esac
 		volmode="${volname:5:2}"
 		volname="${volname:8}"
+		[ "${volname:0:1}" = "." ] && continue
 		if [ "$json_output" = "1" ]; then
 			[ "$json_notfirst" = "1" ] && echo ","
 				echo -e "\t{"
