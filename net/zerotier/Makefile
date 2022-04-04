@@ -6,14 +6,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zerotier
-PKG_VERSION:=1.8.5
-PKG_RELEASE:=bc2c4cf8
+PKG_VERSION:=1.8.7
+PKG_RELEASE:=04b77773
 
 #PKG_SOURCE_PROTO:=git
 # dev branch is the latest
 #PKG_SOURCE_URL:=https://github.com/zerotier/ZeroTierOne.git
 #PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=bc2c4cf80aceeb4bc86d570de1fe17f93f678ca4
+PKG_SOURCE_VERSION:=04b77773c4cd384c359e3a48f40307b288233194
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_SOURCE_VERSION)?
@@ -62,7 +62,7 @@ endif
 endef
 
 # Make binary smaller
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
+TARGET_CFLAGS += -ffunction-sections -fdata-sections -fPIE
 TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
 
 define Package/zerotier/conffiles

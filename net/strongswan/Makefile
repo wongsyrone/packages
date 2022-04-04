@@ -130,8 +130,7 @@ $(call Package/strongswan/Default)
   MENU:=1
   DEPENDS:= +libpthread +ip \
 	+kmod-crypto-authenc \
-	+kmod-ipsec +kmod-ipsec4 +IPV6:kmod-ipsec6 \
-	+kmod-ipt-ipsec +iptables-mod-ipsec
+	+kmod-ipsec +kmod-ipsec4 +IPV6:kmod-ipsec6
 endef
 
 define Package/strongswan/config
@@ -478,8 +477,6 @@ CONFIGURE_ARGS+= \
 	) \
 	ac_cv_search___atomic_load=no
 
-EXTRA_LDFLAGS+= -Wl,-rpath-link,$(STAGING_DIR)/usr/lib
-
 define Package/strongswan/conffiles
 /etc/strongswan.conf
 /etc/strongswan.d/
@@ -673,7 +670,7 @@ $(eval $(call BuildPlugin,blowfish,Blowfish crypto,))
 $(eval $(call BuildPlugin,ccm,CCM AEAD wrapper crypto,))
 $(eval $(call BuildPlugin,chapoly,ChaCha20-Poly1305 AEAD crypto,))
 $(eval $(call BuildPlugin,cmac,CMAC crypto,))
-$(eval $(call BuildPlugin,connmark,netfilter connection marking,+iptables-legacy))
+$(eval $(call BuildPlugin,connmark,netfilter connection marking,+libip4tc))
 $(eval $(call BuildPlugin,constraints,advanced X509 constraint checking,))
 $(eval $(call BuildPlugin,coupling,IKEv2 plugin to couple peer certificates permanently to authentication,))
 $(eval $(call BuildPlugin,ctr,Counter Mode wrapper crypto,))
@@ -690,7 +687,7 @@ $(eval $(call BuildPlugin,eap-radius,EAP RADIUS auth,))
 $(eval $(call BuildPlugin,eap-tls,EAP TLS auth,+strongswan-libtls))
 $(eval $(call BuildPlugin,farp,fake arp respsonses,))
 $(eval $(call BuildPlugin,fips-prf,FIPS PRF crypto,+strongswan-mod-sha1))
-$(eval $(call BuildPlugin,forecast,forward multi/broadcast traffic,+iptables-legacy +kmod-ipt-conntrack-extra))
+$(eval $(call BuildPlugin,forecast,forward multi/broadcast traffic,+libip4tc +kmod-ipt-conntrack-extra))
 $(eval $(call BuildPlugin,gcm,GCM AEAD wrapper crypto,))
 $(eval $(call BuildPlugin,gcrypt,libgcrypt,+PACKAGE_strongswan-mod-gcrypt:libgcrypt))
 $(eval $(call BuildPlugin,gmp,libgmp,+PACKAGE_strongswan-mod-gmp:libgmp))
@@ -735,7 +732,7 @@ $(eval $(call BuildPlugin,stroke,Stroke,+strongswan-charon +strongswan-ipsec))
 $(eval $(call BuildPlugin,test-vectors,crypto test vectors,))
 $(eval $(call BuildPlugin,uci,UCI config interface,+PACKAGE_strongswan-mod-uci:libuci))
 $(eval $(call BuildPlugin,unity,Cisco Unity extension,))
-$(eval $(call BuildPlugin,updown,updown firewall,))
+$(eval $(call BuildPlugin,updown,updown firewall,+iptables-legacy +iptables-mod-ipsec +kmod-ipt-ipsec))
 $(eval $(call BuildPlugin,vici,Versatile IKE Configuration Interface,))
 $(eval $(call BuildPlugin,whitelist,peer identity whitelisting,))
 $(eval $(call BuildPlugin,x509,x509 certificate,))
