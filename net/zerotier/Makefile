@@ -17,7 +17,7 @@ PKG_SOURCE_VERSION:=04b77773c4cd384c359e3a48f40307b288233194
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_SOURCE_VERSION)?
-PKG_HASH:=eae36b151bca0b0dbb441dd7fc68023fc5d202fd8214e8f20e417fe24a422002
+PKG_HASH:=852ce686513519686d999fd5de405f9e853903c92d05fa80df00058f211196a7
 PKG_BUILD_DIR:=$(BUILD_DIR)/ZeroTierOne-$(PKG_SOURCE_VERSION)
 
 PKG_MAINTAINER:=Moritz Warning <moritzwarning@web.de>
@@ -53,6 +53,7 @@ endif
 MAKE_FLAGS += \
 	DEFS="" \
 	OSTYPE="Linux" \
+	ZT_EMBEDDED=1 \
 
 define Build/Compile
 	$(call Build/Compile/Default,one)
