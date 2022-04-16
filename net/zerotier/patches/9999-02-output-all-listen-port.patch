@@ -1,6 +1,6 @@
 --- a/service/OneService.cpp
 +++ b/service/OneService.cpp
-@@ -752,6 +752,10 @@ public:
+@@ -999,6 +999,10 @@ public:
  				} else {
  					_ports[1] = _getRandomPort();
  				}
@@ -11,25 +11,14 @@
  			}
  #ifdef ZT_USE_MINIUPNPC
  			if (_portMappingEnabled) {
-@@ -761,6 +765,10 @@ public:
- 				if (_ports[1]) {
- 					if (_tertiaryPort) {
- 						_ports[2] = _tertiaryPort;
-+						// wongsyrone: save tertiary port to a file for openwrt
-+						char portstr[64];
-+						OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[2]);
-+						OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.tertiary.port").c_str(),std::string(portstr));
- 					} else {
- 						_ports[2] = 20000 + (_ports[0] % 40000);
- 						for(int i=0;;++i) {
-@@ -777,6 +785,10 @@ public:
- 							char uniqueName[64];
- 							OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
- 							_portMapper = new PortMapper(_ports[2],uniqueName);
-+							// wongsyrone: save tertiary port to a file for openwrt
-+							char portstr[64];
-+							OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[2]);
-+							OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.tertiary.port").c_str(),std::string(portstr));
- 						}
- 					}
+@@ -1015,6 +1019,10 @@ public:
+ 					char uniqueName[64];
+ 					OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+ 					_portMapper = new PortMapper(_ports[2],uniqueName);
++					// wongsyrone: save tertiary port to a file for openwrt
++					char portstr[64];
++					OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[2]);
++					OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.tertiary.port").c_str(),std::string(portstr));
  				}
+ 			}
+ #endif
