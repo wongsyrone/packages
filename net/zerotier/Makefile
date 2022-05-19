@@ -51,9 +51,10 @@ MAKE_FLAGS += ZT_DEBUG=1
 endif
 
 MAKE_FLAGS += \
+	ZT_EMBEDDED=1 \
+	ZT_SSO_SUPPORTED=0 \
 	DEFS="" \
 	OSTYPE="Linux" \
-	ZT_EMBEDDED=1 \
 
 define Build/Compile
 	$(call Build/Compile/Default,one)
@@ -63,7 +64,7 @@ endif
 endef
 
 # Make binary smaller
-TARGET_CFLAGS += -ffunction-sections -fdata-sections -fPIE
+TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
 
 define Package/zerotier/conffiles
