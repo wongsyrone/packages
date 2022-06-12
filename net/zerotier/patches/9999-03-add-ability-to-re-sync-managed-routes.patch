@@ -9,7 +9,7 @@
  	fprintf(out,ZT_EOL_S"Available settings:" ZT_EOL_S);
  	fprintf(out,"  Settings to use with [get/set] may include property names from " ZT_EOL_S);
  	fprintf(out,"  the JSON output of \"zerotier-cli -j listnetworks\". Additionally, " ZT_EOL_S);
-@@ -841,6 +843,34 @@ static int cli(int argc,char **argv)
+@@ -839,6 +841,34 @@ static int cli(int argc,char **argv)
  			}
  			return 0;
  		} else {
@@ -46,7 +46,7 @@
  		}
 --- a/service/OneService.cpp
 +++ b/service/OneService.cpp
-@@ -1913,6 +1913,28 @@ public:
+@@ -1908,6 +1908,28 @@ public:
  						} else scode = 500;
  
  					} else scode = 404;
