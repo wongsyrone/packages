@@ -6,18 +6,18 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zerotier
-PKG_VERSION:=1.10.0
-PKG_RELEASE:=d7030b6e
+PKG_VERSION:=1.10.1
+PKG_RELEASE:=fac212fa
 
 #PKG_SOURCE_PROTO:=git
 # dev branch is the latest
 #PKG_SOURCE_URL:=https://github.com/zerotier/ZeroTierOne.git
 #PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=d7030b6e9c407b0fa6aded6f9c4ec07dc1fee06d
+PKG_SOURCE_VERSION:=fac212fafa9464168114a2e3e24c066e5098c185
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_SOURCE_VERSION)?
-PKG_HASH:=59f5e183e969baff6d8210a6dd0cd6f855626d948732b8ecd66065005b160548
+PKG_HASH:=8a3744212a9a6988415ab8ab1f455943ba25bbb516489f1206a8b2e8136afd3f
 PKG_BUILD_DIR:=$(BUILD_DIR)/ZeroTierOne-$(PKG_SOURCE_VERSION)
 
 PKG_MAINTAINER:=Moritz Warning <moritzwarning@web.de>
