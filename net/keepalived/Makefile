@@ -33,7 +33,6 @@ PKG_CONFIG_DEPENDS:= \
 	CONFIG_KEEPALIVED_SNMP_RFC3 \
 	CONFIG_KEEPALIVED_SNMP_REPLY_V3_FOR_V2 \
 	CONFIG_KEEPALIVED_DBUS \
-	CONFIG_KEEPALIVED_JSON \
 	CONFIG_KEEPALIVED_ROUTES \
 	CONFIG_IPV6
 
@@ -58,6 +57,8 @@ define Package/keepalived
     +libnl-genl \
     +libmagic \
     +libkmod \
+    +kmod-nf-ipvs \
+    +libjson-c \
     +KEEPALIVED_NFTABLES:libnftnl \
     +KEEPALIVED_VRRP:kmod-macvlan \
     +KEEPALIVED_VRRP:libnl-route \
@@ -68,7 +69,6 @@ define Package/keepalived
     +KEEPALIVED_IPTABLES:libxtables \
     +KEEPALIVED_IPTABLES:libipset \
     +(KEEPALIVED_SNMP_VRRP||KEEPALIVED_SNMP_CHECKER||KEEPALIVED_SNMP_RFC2||KEEPALIVED_SNMP_RFC3):libnetsnmp \
-    +KEEPALIVED_JSON:libjson-c \
     +KEEPALIVED_DBUS:glib2
 endef
 
@@ -83,6 +83,7 @@ define Package/keepalived/conffiles
 endef
 
 CONFIGURE_ARGS+= \
+	--enable-json \
 	--with-init=SYSV \
 	--disable-track-process \
 	--runstatedir="/var/run"
@@ -146,11 +147,6 @@ CONFIGURE_ARGS += \
 	--disable-snmp-reply-v3-for-v2
 endif
 endif # CONFIG_KEEPALIVED_SNMP_RFC3
-
-ifeq ($(CONFIG_KEEPALIVED_JSON),y)
-CONFIGURE_ARGS += \
-	--enable-json
-endif
 
 ifeq ($(CONFIG_KEEPALIVED_VRRP_AUTH),)
 CONFIGURE_ARGS += \
@@ -241,6 +237,10 @@ endif
 	$(INSTALL_DATA) ./files/hotplug-user \
 		$(1)/etc/hotplug.d/keepalived/01-user
 
+	$(INSTALL_DIR) $(1)/usr/libexec/rpcd
+	$(INSTALL_BIN) ./files/usr/libexec/rpcd/keepalived \
+		$(1)/usr/libexec/rpcd/keepalived
+
 ifneq ($(CONFIG_KEEPALIVED_SNMP_VRRP)$(CONFIG_KEEPALIVED_SNMP_CHECKER)$(CONFIG_KEEPALIVED_SNMP_RFC2)$(CONFIG_KEEPALIVED_SNMP_RFC3),)
 	$(INSTALL_DIR) $(1)/usr/share/snmp/mibs
 endif
@@ -274,4 +274,103 @@ endif
 
 endef
 
+define Package/keepalived-sync
+  SECTION:=net
+  CATEGORY:=Network
+  TITLE:=Keepalived Master and Backup Synchronization
+  DEPENDS:= +keepalived +rsync +inotifywait +sudo +coreutils-timeout
+endef
+
+define Package/keepalived-sync/description
+ Keepalived HA with Master to Backup files and data Synchronization
+endef
+
+define Package/keepalived-sync/conffiles
+/etc/keepalived/scripts
+/etc/keepalived/keys
+endef
+
+define Package/keepalived-sync/install
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/etc/init.d/keepalived-inotify \
+		$(1)/etc/init.d/keepalived-inotify
+
+	$(INSTALL_DIR) $(1)/usr/share/keepalived/scripts
+	$(INSTALL_BIN) ./files/usr/share/keepalived/scripts/rsync.sh \
+		$(1)/usr/share/keepalived/scripts/rsync.sh
+
+	$(INSTALL_DIR) $(1)/etc/keepalived/scripts
+	$(LN) /usr/share/keepalived/scripts/rsync.sh \
+		$(1)/etc/keepalived/scripts/rsync.sh
+
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/keepalived-rsync-inotify \
+		$(1)/usr/bin/keepalived-rsync-inotify
+
+	$(INSTALL_DIR) $(1)/lib/functions/keepalived
+	$(INSTALL_DATA) ./files/lib/functions/keepalived/hotplug.sh \
+		$(1)/lib/functions/keepalived/hotplug.sh
+	$(INSTALL_DATA) ./files/lib/functions/keepalived/common.sh \
+		$(1)/lib/functions/keepalived/common.sh
+
+	$(INSTALL_DIR) $(1)/usr/libexec/keepalived/rpc
+	$(INSTALL_DATA) ./files/usr/libexec/keepalived/rpc/sync.sh \
+		$(1)/usr/libexec/keepalived/rpc/sync.sh
+
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/keepalived
+	$(CP) ./files/etc/hotplug.d/keepalived/* \
+		$(1)/etc/hotplug.d/keepalived
+endef
+
+USER=keepalived
+USER_ID=60001
+USER_HOME=/usr/share/keepalived/rsync
+SUDO_DIR=/etc/sudoers.d
+SUDO_FILE=$(SUDO_DIR)/$(USER)
+KEYS_DIR=/etc/keepalived/keys
+
+define Package/keepalived-sync/postinst
+	#!/bin/sh
+
+	mkdir -p "$${IPKG_INSTROOT}/etc/uci-defaults"
+	DEFAULT_SCRIPT="$${IPKG_INSTROOT}/etc/uci-defaults/99-keepalived-sync"
+
+	cat << EOF > $${DEFAULT_SCRIPT}
+#!/bin/sh
+
+. /lib/functions.sh
+
+mkdir -p $(KEYS_DIR)
+
+group_add "$(USER)" "$(USER_ID)"
+user_add "$(USER)" "$(USER_ID)" "$(USER_ID)" "$(USER)" "$(USER_HOME)" "/bin/ash"
+
+mkdir -m 700 -p "$(USER_HOME)"
+mkdir -m 700 -p "$(USER_HOME)/.ssh"
+chown "$(USER)":"$(USER)" "$(USER_HOME)" -R
+
+[ ! -d "$(SUDO_DIR)" ] && mkdir "$(SUDO_DIR)"
+echo "$(USER) ALL= NOPASSWD:/usr/bin/rsync" > "$(SUDO_FILE)"
+EOF
+
+	[ -z "$${IPKG_INSTROOT}" ] && [ -f "$${DEFAULT_SCRIPT}" ] && sh "$${DEFAULT_SCRIPT}"
+
+	exit 0
+endef
+
+define Package/keepalived-sync/postrm
+	#!/bin/sh
+
+	[ -n "$${IPKG_INSTROOT}" ] && exit 0
+
+	[ -d "$(KEYS_DIR)" ] && rm -rf "$(KEYS_DIR)"
+	[ -d "$(USER_HOME)" ] && rm -rf "$(USER_HOME)"
+	[ -f "$(SUDO_FILE)" ] && rm -f "$(SUDO_FILE)"
+
+	sed -i -e "/^$(USER):/d" /etc/passwd /etc/shadow /etc/group
+
+	exit 0
+endef
+
 $(eval $(call BuildPackage,keepalived))
+$(eval $(call BuildPackage,keepalived-sync))
