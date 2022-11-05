@@ -1,0 +1,12 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -6,7 +6,8 @@ EXTRA_DIST = \
+ AM_CPPFLAGS = \
+ 	-I$(top_builddir)/include \
+ 	-I$(top_srcdir)/include \
+-	-DLOCALEDIR=\"$(localedir)\"
++	-DLOCALEDIR=\"$(localedir)\" \
++	-D_LARGEFILE64_SOURCE
+ 
+ pkgconfdir = $(libdir)/pkgconfig
+ sysincludedir = $(includedir)/sys
