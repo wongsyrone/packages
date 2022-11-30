@@ -7,17 +7,17 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zerotier
 PKG_VERSION:=1.10.2
-PKG_RELEASE:=af7ccff8
+PKG_RELEASE:=85da0b41
 
 #PKG_SOURCE_PROTO:=git
 # dev branch is the latest
 #PKG_SOURCE_URL:=https://github.com/zerotier/ZeroTierOne.git
 #PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=af7ccff846f7fa6470161927996168d51969142c
+PKG_SOURCE_VERSION:=85da0b419c19da97f8310f9200b48d7ae68f2e23
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_SOURCE_VERSION)?
-PKG_HASH:=f1ad1d92fb887d5fb1d26f8cc5c26d7028339f9db323c85cdb8467b0360bd5e0
+PKG_HASH:=43273519a698a67958bea24c5ff463cad17bdbe270cd6ab1afa69a9aca2b33f9
 PKG_BUILD_DIR:=$(BUILD_DIR)/ZeroTierOne-$(PKG_SOURCE_VERSION)
 
 PKG_MAINTAINER:=Moritz Warning <moritzwarning@web.de>
@@ -63,9 +63,12 @@ ifeq ($(CONFIG_ZEROTIER_ENABLE_SELFTEST),y)
 endif
 endef
 
-# Make binary smaller
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
+# all warnings and don't treat all of them as error, I don't want to fix them all
+TARGET_CFLAGS += -Wall
+
+# Make binary smaller, disable execstack for security
+# BUG: There are LDFLAGS bugs in make-linux.mk, I don't want to fix it, just pass LDFLAGS via CFLAGS
+TARGET_CFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections,--as-needed -Wl,-z,noexecstack
 
 define Package/zerotier/conffiles
 /etc/config/zerotier
