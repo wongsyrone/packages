@@ -26,7 +26,7 @@
  		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];
 --- a/node/NetworkConfig.hpp
 +++ b/node/NetworkConfig.hpp
-@@ -263,6 +263,7 @@ public:
+@@ -267,6 +267,7 @@ public:
  		capabilityCount(0),
  		tagCount(0),
  		certificateOfOwnershipCount(0),
@@ -34,7 +34,7 @@
  		capabilities(),
  		tags(),
  		certificatesOfOwnership(),
-@@ -280,7 +281,6 @@ public:
+@@ -284,7 +285,6 @@ public:
  		name[0] = 0;
  		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
  		memset(routes, 0, sizeof(ZT_VirtualNetworkRoute)*ZT_MAX_NETWORK_ROUTES);
