@@ -26,6 +26,7 @@ PKG_LICENSE_FILES:=LICENSE.txt
 
 PKG_ASLR_PIE:=0
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_FLAGS:=gc-sections
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -66,9 +67,9 @@ endef
 # all warnings and don't treat all of them as error, I don't want to fix them all
 TARGET_CFLAGS += -Wall
 
-# Make binary smaller, disable execstack for security
-# BUG: There are LDFLAGS bugs in make-linux.mk, I don't want to fix it, just pass LDFLAGS via CFLAGS
-TARGET_CFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections,--as-needed -Wl,-z,noexecstack
+# Make binary smaller
+TARGET_CFLAGS += -Wl,-z,noexecstack
+TARGET_LDFLAGS += -Wl,--as-needed -Wl,-z,noexecstack
 
 define Package/zerotier/conffiles
 /etc/config/zerotier

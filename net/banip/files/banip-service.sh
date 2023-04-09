@@ -1,5 +1,5 @@
 #!/bin/sh
-# banIP main service script - ban incoming and outgoing ip adresses/subnets via sets in nftables
+# banIP main service script - ban incoming and outgoing ip addresses/subnets via sets in nftables
 # Copyright (c) 2018-2023 Dirk Brenken (dev@brenken.org)
 # This is free software, licensed under the GNU General Public License v3.
 
@@ -29,12 +29,12 @@ f_mkfile "${ban_allowlist}"
 #
 if [ "${ban_action}" != "reload" ]; then
 	if [ -x "${ban_fw4cmd}" ]; then
-		cnt=0
-		while [ "${cnt}" -lt "10" ] && ! /etc/init.d/firewall status | grep -q "^active"; do
+		cnt="0"
+		while [ "${cnt}" -lt "30" ] && ! /etc/init.d/firewall status >/dev/null 2>&1; do
 			cnt="$((cnt + 1))"
 			sleep 1
 		done
-		if ! /etc/init.d/firewall status | grep -q "^active"; then
+		if ! /etc/init.d/firewall status >/dev/null 2>&1; then
 			f_log "err" "nft based firewall/fw4 not functional"
 		fi
 	else
@@ -44,7 +44,7 @@ fi
 
 # init nft namespace
 #
-if [ "${ban_action}" != "reload" ] || ! "${ban_nftcmd}" -t list table inet banIP >/dev/null 2>&1; then
+if [ "${ban_action}" != "reload" ] || ! "${ban_nftcmd}" -t list set inet banIP allowlistvMAC >/dev/null 2>&1; then
 	if f_nftinit "${ban_tmpfile}".init.nft; then
 		f_log "info" "nft namespace initialized"
 	else
@@ -124,24 +124,34 @@ for feed in allowlist ${ban_feed} blocklist; do
 	fi
 done
 wait
-
-# start domain lookup
-#
-f_log "info" "start detached banIP domain lookup"
-(f_lookup "allowlist") &
-hold="$((cnt % ban_cores))"
-[ "${hold}" = "0" ] && wait
-(f_lookup "blocklist") &
-
-# tidy up
-#
 f_rmset
 f_rmdir "${ban_tmpdir}"
 f_genstatus "active"
 f_log "info" "finished banIP download processes"
+
+# start domain lookup
+#
+f_log "info" "start banIP domain lookup"
+cnt="1"
+for list in allowlist blocklist; do
+	(f_lookup "${list}") &
+	hold="$((cnt % ban_cores))"
+	[ "${hold}" = "0" ] && wait
+	cnt="$((cnt + 1))"
+done
+wait
+
+# end processing
+#
+if [ "${ban_mailnotification}" = "1" ] && [ -n "${ban_mailreceiver}" ] && [ -x "${ban_mailcmd}" ]; then
+	(
+		sleep ${ban_triggerdelay}
+		f_mail
+	) &
+fi
 rm -rf "${ban_lock}"
 
-# start log service
+# start detached log service
 #
 if [ -x "${ban_logreadcmd}" ] && [ -n "${ban_logterm%%??}" ]; then
 	f_log "info" "start detached banIP log service"
@@ -174,7 +184,7 @@ if [ -x "${ban_logreadcmd}" ] && [ -n "${ban_logterm%%??}" ]; then
 				log_count="$(printf "%s\n" "${log_raw}" | grep -c "found '${ip}'")"
 				if [ "${log_count}" -ge "${ban_logcount}" ]; then
 					if "${ban_nftcmd}" add element inet banIP "blocklist${proto}" "{ ${ip} ${nft_expiry} }" >/dev/null 2>&1; then
-						f_log "info" "added IP${proto} '${ip}' (${nft_expiry:-"-"}) to blocklist${proto} set"
+						f_log "info" "added IP${proto} '${ip}' (expiry: ${nft_expiry:-"-"}) to blocklist${proto} set"
 						if [ "${ban_autoblocklist}" = "1" ] && ! grep -q "^${ip}" "${ban_blocklist}"; then
 							printf "%-42s%s\n" "${ip}" "# added on $(date "+%Y-%m-%d %H:%M:%S")" >>"${ban_blocklist}"
 							f_log "info" "added IP${proto} '${ip}' to local blocklist"
@@ -184,7 +194,7 @@ if [ -x "${ban_logreadcmd}" ] && [ -n "${ban_logterm%%??}" ]; then
 			fi
 		done
 
-# start no-op service loop
+# start detached no-op service loop
 #
 else
 	f_log "info" "start detached no-op banIP service (logterms are missing)"
