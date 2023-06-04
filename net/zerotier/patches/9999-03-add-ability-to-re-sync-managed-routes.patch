@@ -46,32 +46,30 @@
  		}
 --- a/service/OneService.cpp
 +++ b/service/OneService.cpp
-@@ -1887,6 +1887,28 @@ public:
- 						} else scode = 500;
+@@ -1778,6 +1778,26 @@ public:
+ 		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
+ 		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
  
- 					} else scode = 404;
-+				} else if (ps[0] == "resyncnetwork") {
-+					// copy from 'network' above
-+					if (ps.size() == 2) {
++		auto resyncnetworkPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
++			auto input = req.matches[1];
++			uint64_t wantnw = Utils::hexStrToU64(input.str().c_str());
++			_node->join(wantnw, (void*)0, (void*)0);
++			auto out = json::object();
++			Mutex::Lock l(_nets_m);
++			if (!_nets.empty()) {
++				NetworkState &ns = _nets[wantnw];
++				setNetworkSettings(wantnw, ns.settings());
++				if (ns.tap()) {
++					syncManagedStuff(ns,true,true,true);
++				}
 +
-+						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-+						_node->join(wantnw,(void *)0,(void *)0); // does nothing if we are a member
-+						Mutex::Lock l(_nets_m);
-+						if (!_nets.empty()) {
-+							if (_nets.find(wantnw) != _nets.end()) {
-+								NetworkState& ns = _nets[wantnw];
-+								setNetworkSettings(wantnw, ns.settings());
-+								if (ns.tap()) {
-+									syncManagedStuff(ns,true,true,true);
-+								}
++				_networkToJson(out, ns);
++			}
++			out["resyncnetworkresult"] = true;
++			setContent(req, res, out.dump());
++		};
++		_controlPlane.Post("/resyncnetwork/([0-9a-fA-F]{16})", resyncnetworkPost);
 +
-+								_networkToJson(res, ns);
-+
-+								scode = 200;
-+							}
-+						} else scode = 500;
-+
-+					} else scode = 404;
- 				} else {
- 					if (_controller)
- 						scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+ 		_controlPlane.Delete("/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+ 			auto input = req.matches[1];
+ 			auto out = json::object();

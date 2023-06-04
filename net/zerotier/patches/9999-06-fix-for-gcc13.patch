@@ -1,0 +1,20 @@
+--- a/ext/prometheus-cpp-lite-1.0/core/include/prometheus/family.h
++++ b/ext/prometheus-cpp-lite-1.0/core/include/prometheus/family.h
+@@ -8,6 +8,7 @@
+ #include <unordered_map>
+ #include <vector>
+ #include <cassert>
++#include <stdexcept>
+ 
+ #include "prometheus/collectable.h"
+ #include "prometheus/metric.h"
+--- a/ext/prometheus-cpp-lite-1.0/core/include/prometheus/registry.h
++++ b/ext/prometheus-cpp-lite-1.0/core/include/prometheus/registry.h
+@@ -5,6 +5,7 @@
+ #include <mutex>
+ #include <string>
+ #include <vector>
++#include <stdexcept>
+ 
+ #include "prometheus/collectable.h"
+ #include "prometheus/family.h"

@@ -1,6 +1,6 @@
 --- a/service/OneService.cpp
 +++ b/service/OneService.cpp
-@@ -977,6 +977,10 @@ public:
+@@ -1024,6 +1024,10 @@ public:
  				} else {
  					_ports[1] = _getRandomPort();
  				}
@@ -11,7 +11,7 @@
  			}
  #ifdef ZT_USE_MINIUPNPC
  			if (_portMappingEnabled) {
-@@ -993,6 +997,10 @@ public:
+@@ -1040,6 +1044,10 @@ public:
  					char uniqueName[64];
  					OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
  					_portMapper = new PortMapper(_ports[2],uniqueName);
