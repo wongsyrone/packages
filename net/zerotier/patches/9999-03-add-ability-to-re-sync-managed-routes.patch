@@ -9,7 +9,7 @@
  	fprintf(out,ZT_EOL_S"Available settings:" ZT_EOL_S);
  	fprintf(out,"  Settings to use with [get/set] may include property names from " ZT_EOL_S);
  	fprintf(out,"  the JSON output of \"zerotier-cli -j listnetworks\". Additionally, " ZT_EOL_S);
-@@ -856,6 +858,34 @@ static int cli(int argc,char **argv)
+@@ -858,6 +860,34 @@ static int cli(int argc,char **argv)
  			}
  			return 0;
  		} else {
@@ -46,9 +46,17 @@
  		}
 --- a/service/OneService.cpp
 +++ b/service/OneService.cpp
-@@ -1778,6 +1778,26 @@ public:
- 		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
- 		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
+@@ -1558,6 +1558,7 @@ public:
+ 		std::string moonPath = "/moon/([0-9a-fA-F]{10})";
+ 		std::string networkListPath = "/network";
+ 		std::string networkPath = "/network/([0-9a-fA-F]{16})";
++		std::string resyncnetworkPath = "/resyncnetwork/([0-9a-fA-F]{16})";
+ 		std::string peerListPath = "/peer";
+ 		std::string peerPath = "/peer/([0-9a-fA-F]{10})";
+ 		std::string statusPath = "/status";
+@@ -1960,6 +1961,27 @@ public:
+ 		_controlPlaneV6.Post(networkPath, networkPost);
+ 		_controlPlaneV6.Put(networkPath, networkPost);
  
 +		auto resyncnetworkPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 +			auto input = req.matches[1];
@@ -68,8 +76,9 @@
 +			out["resyncnetworkresult"] = true;
 +			setContent(req, res, out.dump());
 +		};
-+		_controlPlane.Post("/resyncnetwork/([0-9a-fA-F]{16})", resyncnetworkPost);
++		_controlPlane.Post(resyncnetworkPath, resyncnetworkPost);
++		_controlPlaneV6.Post(resyncnetworkPath, resyncnetworkPost);
 +
- 		_controlPlane.Delete("/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+ 		auto networkDelete = [&, setContent](const httplib::Request &req, httplib::Response &res) {
  			auto input = req.matches[1];
  			auto out = json::object();
