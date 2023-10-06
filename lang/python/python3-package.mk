@@ -20,7 +20,7 @@ PYTHON3:=python$(PYTHON3_VERSION)
 
 PYTHON3PATH:=$(PYTHON3_LIB_DIR):$(STAGING_DIR)/$(PYTHON3_PKG_DIR):$(PKG_INSTALL_DIR)/$(PYTHON3_PKG_DIR)
 
--include $(PYTHON3_LIB_DIR)/config-$(PYTHON3_VERSION)/Makefile-vars
+-include $(PYTHON3_LIB_DIR)/openwrt/Makefile-vars
 
 # These configure args are needed in detection of path to Python header files
 # using autotools.
@@ -39,11 +39,17 @@ PYTHON3_VARS = \
 	CPPFLAGS="$(TARGET_CPPFLAGS) -I$(PYTHON3_INC_DIR)" \
 	LDFLAGS="$(TARGET_LDFLAGS) -lpython$(PYTHON3_VERSION)" \
 	_PYTHON_HOST_PLATFORM="$(_PYTHON_HOST_PLATFORM)" \
+	_PYTHON_SYSCONFIGDATA_NAME="_sysconfigdata_$(ABIFLAGS)_$(MACHDEP)_$(MULTIARCH)" \
 	PYTHONPATH="$(PYTHON3PATH)" \
 	PYTHONDONTWRITEBYTECODE=1 \
 	_python_sysroot="$(STAGING_DIR)" \
 	_python_prefix="/usr" \
-	_python_exec_prefix="/usr"
+	_python_exec_prefix="/usr" \
+	CARGO_BUILD_TARGET="$(RUSTC_TARGET_ARCH)" \
+	CARGO_HOME="$(CARGO_HOME)" \
+	PATH="$(CARGO_HOME)/bin:$(PATH)" \
+	PYO3_CROSS_LIB_DIR="$(PYTHON3_LIB_DIR)" \
+	RUSTFLAGS="$(CARGO_RUSTFLAGS)"
 
 # $(1) => directory of python script
 # $(2) => python script and its arguments

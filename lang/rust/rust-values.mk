@@ -3,23 +3,31 @@
 # Copyright (C) 2023 Luca Barbato and Donald Hoskins
 
 # Rust Environmental Vars
-CONFIG_HOST_SUFFIX:=$(word 4, $(subst -, ,$(GNU_HOST_NAME)))
-RUSTC_HOST_ARCH:=$(HOST_ARCH)-unknown-linux-$(CONFIG_HOST_SUFFIX)
-CARGO_HOME:=$(STAGING_DIR_HOSTPKG)/cargo
-CARGO_VARS:=
+RUSTC_HOST_SUFFIX:=$(word 4, $(subst -, ,$(GNU_HOST_NAME)))
+RUSTC_HOST_ARCH:=$(HOST_ARCH)-unknown-linux-$(RUSTC_HOST_SUFFIX)
+CARGO_HOME:=$(STAGING_DIR)/host/cargo
+CARGO_VARS?=
 
 ifeq ($(CONFIG_USE_MUSL),y)
-# Force linking of the SSP library for musl
-ifdef CONFIG_PKG_CC_STACKPROTECTOR_REGULAR
-  ifeq ($(strip $(PKG_SSP)),1)
-    RUSTC_LDFLAGS += -lssp_nonshared
+  # Force linking of the SSP library for musl
+  ifdef CONFIG_PKG_CC_STACKPROTECTOR_REGULAR
+    ifeq ($(strip $(PKG_SSP)),1)
+      RUSTC_LDFLAGS+=-lssp_nonshared
+    endif
+  endif
+  ifdef CONFIG_PKG_CC_STACKPROTECTOR_STRONG
+    ifeq ($(strip $(PKG_SSP)),1)
+      RUSTC_LDFLAGS+=-lssp_nonshared
+    endif
   endif
 endif
-ifdef CONFIG_PKG_CC_STACKPROTECTOR_STRONG
-  ifeq ($(strip $(PKG_SSP)),1)
-    TARGET_CFLAGS += -lssp_nonshared
+
+CARGO_RUSTFLAGS+=-Ctarget-feature=-crt-static $(RUSTC_LDFLAGS)
+
+ifeq ($(HOST_OS),Darwin)
+  ifeq ($(HOST_ARCH),arm64)
+    RUSTC_HOST_ARCH:=aarch64-apple-darwin
   endif
-endif
 endif
 
 # mips64 openwrt has a specific targed in rustc
@@ -33,6 +41,8 @@ RUSTC_TARGET_ARCH:=$(subst muslgnueabi,musleabi,$(RUSTC_TARGET_ARCH))
 
 ifeq ($(ARCH),i386)
   RUSTC_TARGET_ARCH:=$(subst i486,i586,$(RUSTC_TARGET_ARCH))
+else ifeq ($(ARCH),riscv64)
+  RUSTC_TARGET_ARCH:=$(subst riscv64,riscv64gc,$(RUSTC_TARGET_ARCH))
 endif
 
 # ARM Logic
@@ -47,5 +57,8 @@ ifeq ($(ARCH),arm)
 endif
 
 ifeq ($(ARCH),aarch64)
-    RUST_CFLAGS:=-mno-outline-atomics
+    RUSTC_CFLAGS:=-mno-outline-atomics
 endif
+
+# Support only a subset for now.
+RUST_ARCH_DEPENDS:=@(aarch64||arm||i386||i686||mips||mipsel||mips64||mips64el||mipsel||powerpc64||riscv64||x86_64)
