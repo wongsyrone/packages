@@ -8,18 +8,22 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=openssh
-PKG_VERSION:=9.5p1
-PKG_RELEASE:=1
+PKG_REALVERSION:=9.9p1
+PKG_VERSION:=9.9_p1
+PKG_RELEASE:=3
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_REALVERSION).tar.gz
 PKG_SOURCE_URL:=https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/ \
 		https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/
-PKG_HASH:=f026e7b79ba7fb540f75182af96dc8a8f1db395f922bbc9f6ca603672686086b
+PKG_HASH:=b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(if $(BUILD_VARIANT),$(PKG_NAME)-$(BUILD_VARIANT)/)$(PKG_NAME)-$(PKG_REALVERSION)
 
 PKG_LICENSE:=BSD ISC
 PKG_LICENSE_FILES:=LICENCE
 PKG_CPE_ID:=cpe:/a:openssh:openssh
 
+#While bumping new version, make sure that it works without it, so it can be removed.
+PKG_FIXUP:=autoreconf
 PKG_REMOVE_FILES:=
 PKG_CONFIG_DEPENDS := \
 	CONFIG_OPENSSH_LIBFIDO2
@@ -79,6 +83,7 @@ define Package/openssh-keygen
 	$(call Package/openssh/Default)
 	DEPENDS+= +libopenssl +zlib
 	TITLE+= keygen
+	ALTERNATIVES:=200:/usr/bin/ssh-keygen:/usr/libexec/ssh-keygen-openssh
 endef
 
 define Package/openssh-keygen/description
@@ -177,8 +182,9 @@ CONFIGURE_ARGS += \
 	--without-kerberos5 \
 	--with-stackprotect \
 	--with$(if $(CONFIG_OPENSSL_ENGINE),,out)-ssl-engine \
-	--with$(if $(CONFIG_OPENSSH_LIBFIDO2),,out)-security-key-builtin
-	
+	--with$(if $(CONFIG_OPENSSH_LIBFIDO2),,out)-security-key-builtin \
+	--with-cflags-after=-fzero-call-used-regs=skip
+
 ifeq ($(BUILD_VARIANT),with-pam)
 CONFIGURE_ARGS += \
 	--with-pam
@@ -219,8 +225,8 @@ define Package/openssh-client-utils/install
 endef
 
 define Package/openssh-keygen/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/ssh-keygen $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/usr/libexec
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/ssh-keygen $(1)/usr/libexec/ssh-keygen-openssh
 endef
 
 define Package/openssh-server/install
@@ -233,6 +239,8 @@ define Package/openssh-server/install
 	$(INSTALL_BIN) ./files/sshd.failsafe $(1)/lib/preinit/99_10_failsafe_sshd
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/sshd $(1)/usr/sbin/
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/sshd-session $(1)/usr/lib/
 endef
 
 define Package/openssh-server-pam/install

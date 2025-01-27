@@ -6,14 +6,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zerotier
-PKG_VERSION:=1.12.2
-PKG_RELEASE:=9ae8b0b3
+PKG_VERSION:=1.14.1
+PKG_RELEASE:=b5c51796
 
 #PKG_SOURCE_PROTO:=git
 # dev branch is the latest
 #PKG_SOURCE_URL:=https://github.com/zerotier/ZeroTierOne.git
 #PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=9ae8b0b3b60b27cf06d7e74629c17e4a0f248364
+PKG_SOURCE_VERSION:=b5c51796b9a14ef0251d73e20e346683ad8014cf
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_SOURCE_URL:=https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/$(PKG_SOURCE_VERSION)?
@@ -81,6 +81,7 @@ define Package/zerotier/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/zerotier-one $(1)/usr/bin/
 	$(LN) zerotier-one $(1)/usr/bin/zerotier-cli
 	$(LN) zerotier-one $(1)/usr/bin/zerotier-idtool
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
 
 ifeq ($(CONFIG_ZEROTIER_ENABLE_SELFTEST),y)
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/zerotier-selftest $(1)/usr/bin/

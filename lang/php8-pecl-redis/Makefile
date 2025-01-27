@@ -8,13 +8,13 @@ include $(TOPDIR)/rules.mk
 PECL_NAME:=redis
 PECL_LONGNAME:=PHP extension for interfacing with Redis
 
-PKG_VERSION:=6.0.1
+PKG_VERSION:=6.1.0
 PKG_RELEASE:=1
-PKG_HASH:=d39136e0ef9495f8e775ef7349a97658fb41c526d12d8e517f56274f149e1e4e
+PKG_HASH:=f10405f639fe415e9ed4ec99538e72c90694d8dbd62868edcfcd6a453466b48c
 
 PKG_NAME:=php8-pecl-redis
 PKG_SOURCE:=$(PECL_NAME)-$(PKG_VERSION).tgz
-PKG_SOURCE_URL:=http://pecl.php.net/get/
+PKG_SOURCE_URL:=https://pecl.php.net/get/
 
 PKG_MAINTAINER:=Michael Heimpold <mhei@heimpold.de>
 

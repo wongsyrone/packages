@@ -1,14 +1,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=netbird
-PKG_VERSION:=0.23.6
+PKG_VERSION:=0.36.3
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/netbirdio/netbird/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=cb29e237652634f3a2a5774fdc239f615d46cf9339811c707744d1e03797126d
+PKG_HASH:=71d0e7c342bdcd1b74b9b4e99d2c87f898ed54f780b4adf6bbda77900b842ec8
 
-PKG_MAINTAINER:=Oskari Rauta <oskari.rauta@gmail.com>
+PKG_MAINTAINER:=Wesley Gimenes <wehagy@proton.me>
 PKG_LICENSE:=BSD-3-Clause
 PKG_LICENSE_FILES:=LICENSE
 
@@ -29,14 +29,14 @@ define Package/netbird
   SUBMENU:=VPN
   TITLE:=Connect your devices into a single secure private WireGuard®-based mesh network
   URL:=https://netbird.io
-  DEPENDS:=$(GO_ARCH_DEPENDS)
+  DEPENDS:=$(GO_ARCH_DEPENDS) +kmod-wireguard
 endef
 
 define Package/netbird/description
-  NetBird is an open-source VPN management platform built on top of WireGuard® making it easy to create 
+  NetBird is an open-source VPN management platform built on top of WireGuard® making it easy to create
   secure private networks for your organization or home.
 
-  It requires zero configuration effort leaving behind the hassle of opening ports, complex firewall rules, VPN 
+  It requires zero configuration effort leaving behind the hassle of opening ports, complex firewall rules, VPN
   gateways, and so forth.
 endef
 

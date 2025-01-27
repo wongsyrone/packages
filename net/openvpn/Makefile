@@ -9,16 +9,16 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=openvpn
 
-PKG_VERSION:=2.6.6
+PKG_VERSION:=2.6.13
 PKG_RELEASE:=1
 
 PKG_SOURCE_URL:=\
 	https://build.openvpn.net/downloads/releases/ \
 	https://swupdate.openvpn.net/community/releases/
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_HASH:=3b074f392818b31aa529b84f76e8b5e4ad03fca764924f46d906bceaaf421034
+PKG_HASH:=1af10b86922bd7c99827cc0f151dfe9684337b8e5ebdb397539172841ac24a6a
 
-PKG_MAINTAINER:=Magnus Kroken <mkroken@gmail.com>
+PKG_MAINTAINER:=
 
 PKG_INSTALL:=1
 PKG_FIXUP:=autoreconf

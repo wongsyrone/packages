@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=atftp
 PKG_VERSION:=0.8.0
-PKG_RELEASE:=1
+PKG_RELEASE:=4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@SF/$(PKG_NAME)
@@ -17,6 +17,7 @@ PKG_HASH:=df2aa089c7670f9eab40e5598e5d2cb6a582dc5182926ea50b4d690e4e37f316
 PKG_MAINTAINER:=Daniel Danzberger <daniel@dd-wrt.com>
 PKG_LICENSE:=GPL-2.0-or-later
 PKG_LICENSE_FILES:=LICENSE
+PKG_CPE_ID:=cpe:/a:atftp_project:atftp
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1

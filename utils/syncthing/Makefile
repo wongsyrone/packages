@@ -1,16 +1,16 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=syncthing
-PKG_VERSION:=1.24.0
+PKG_VERSION:=1.29.2
 PKG_RELEASE:=1
 
 PKG_SOURCE:=syncthing-source-v$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/syncthing/syncthing/releases/download/v$(PKG_VERSION)
-PKG_HASH:=4a9459667f9b70a7d1e7d572c7c9d02431ef8f055679eef368300ce1a826608f
+PKG_HASH:=c7b6bc36af1af6f1cb304f4ec4c16743760ef6e8b3586f31dc11439d5d5fd427
 
 PKG_BUILD_DIR=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)/$(PKG_NAME)
 
-PKG_MAINTAINER:=Paul Spooren <mail@aparcar.org>
+PKG_MAINTAINER:=Paul Spooren <mail@aparcar.org>, Van Waholtz <brvphoenix@gmail.com>
 PKG_LICENSE:=MPL-2.0
 PKG_LICENSE_FILES:=LICENSE
 PKG_CPE_ID:=cpe:/a:syncthing:syncthing

@@ -1,15 +1,18 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=yt-dlp
-PKG_VERSION:=2023.3.4
-PKG_RELEASE:=2
+PKG_VERSION:=2024.7.9
+PKG_RELEASE:=1
 
 PYPI_NAME:=yt-dlp
-PKG_HASH:=265d5da97a76c15d7d9a4088a67b78acd5dcf6f8cfd8257c52f581ff996ff515
+PKG_HASH:=e19f00f9e55e90bca1c94bcaf809aa33e51634be9f0de2df84a72d3206934f94
+PYPI_SOURCE_NAME:=yt_dlp
 
 PKG_MAINTAINER:=Michal Vasilek <michal.vasilek@nic.cz>
 PKG_LICENSE:=Unlicense
 PKG_LICENSE_FILES:=LICENSE
+
+PKG_BUILD_DEPENDS:=python-hatchling/host
 
 include ../../lang/python/pypi.mk
 include $(INCLUDE_DIR)/package.mk

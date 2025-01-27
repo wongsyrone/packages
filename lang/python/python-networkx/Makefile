@@ -6,14 +6,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=python-networkx
-PKG_VERSION:=3.1
+PKG_VERSION:=3.3
 PKG_RELEASE:=1
 
 PYPI_NAME:=networkx
-PKG_HASH:=de346335408f84de0eada6ff9fafafff9bcda11f0a0dfaa931133debb146ab61
+PKG_HASH:=0c127d8b2f4865f59ae9cb8aafcd60b5c70f3241ebd66f7defad7c4ab90126c9
 
-PKG_LICENSE:=BSD-3-clause
+PKG_LICENSE:=BSD-3-Clause
 PKG_LICENSE_FILES:=LICENSE.txt
+PKG_CPE_ID:=cpe:/a:python:networkx
 PKG_MAINTAINER:=W. Michael Petullo <mike@flyn.org>
 
 include ../pypi.mk
